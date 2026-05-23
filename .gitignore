@@ -9,6 +9,7 @@ dist/
 build/
 **/dist/
 **/build/
+*.tsbuildinfo
 
 # Environment
 .env
