@@ -21,9 +21,9 @@ import {
   type Recording,
 } from "@/lib/audio";
 
-const HISTORY = 96;
-const RMS_INTERVAL_MS = 60;
-const ELAPSED_INTERVAL_MS = 100;
+const HISTORY = 160;
+const RMS_INTERVAL_MS = 28;
+const ELAPSED_INTERVAL_MS = 90;
 
 export type RecorderState = "idle" | "recording" | "processing" | "error";
 

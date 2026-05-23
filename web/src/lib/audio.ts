@@ -57,11 +57,15 @@ function pickMimeType(): string {
  * recorder). The returned recorder is already in "recording" state.
  */
 export async function startPipeline(): Promise<AudioPipeline> {
+  // Mic constraints tuned for soft / distant speech:
+  //   - noiseSuppression OFF: aggressive suppression silences quiet speakers
+  //   - echoCancellation OFF: no playback during recording, gain is wasted
+  //   - autoGainControl ON: boost soft signals so the waveform reads them
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       channelCount: 1,
-      echoCancellation: true,
-      noiseSuppression: true,
+      echoCancellation: false,
+      noiseSuppression: false,
       autoGainControl: true,
     },
   });

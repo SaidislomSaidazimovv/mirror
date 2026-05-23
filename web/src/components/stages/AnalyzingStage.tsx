@@ -22,14 +22,22 @@ import { getDemoSentence } from "@/lib/ovozData";
 export function AnalyzingStage() {
   const sentenceId = useSession((s) => s.sentenceId);
   const triggeredPhoneme = useSession((s) => s.triggeredPhoneme);
+  const triggeredPhonemeIdx = useSession((s) => s.triggeredPhonemeIdx);
   const l1 = useSession((s) => s.l1);
 
   const sentence = getDemoSentence(sentenceId);
   const phonemes = sentence?.expectedPhonemes ?? [];
 
+  // Prefer the explicit index from the store (set by App after ASR);
+  // fall back to the scripted trigger only if nothing else is set.
   const triggerHardcoded = sentence?.diagnoses[l1].triggerPhoneme;
   const trigger = triggeredPhoneme ?? triggerHardcoded ?? null;
-  const triggerIdx = trigger ? phonemes.indexOf(trigger) : -1;
+  const triggerIdx =
+    triggeredPhonemeIdx !== null && triggeredPhonemeIdx >= 0
+      ? triggeredPhonemeIdx
+      : trigger
+      ? phonemes.indexOf(trigger)
+      : -1;
 
   const [scanIdx, setScanIdx] = useState(-1);
   const [settled, setSettled] = useState(false);
