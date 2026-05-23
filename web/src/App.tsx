@@ -33,23 +33,32 @@ type Mode = "main" | "reference";
 export default function App() {
   const session = useSession();
   const [mode, setMode] = useState<Mode>("main");
-  const mainRec = useRecorder(MAIN_MAX_SECONDS);
-  const refRec = useRecorder(REF_MAX_SECONDS);
 
   /* ----------- Main loop transitions ----------- */
 
+  const handleMainFinish = useCallback(
+    async (result: Recording) => {
+      session.setTargetRecording({ url: result.url, blob: result.blob });
+      session.goto("analyzing");
+      await runAnalysisAndDiagnosis(result);
+    },
+    // runAnalysisAndDiagnosis is defined below; session is stable enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session.l1, session.sentenceId]
+  );
+
+  const mainRec = useRecorder(MAIN_MAX_SECONDS, handleMainFinish);
+  const refRec = useRecorder(REF_MAX_SECONDS);
+
   const onStartRecording = useCallback(async () => {
-    await mainRec.start();
-    if (mainRec.state !== "error") session.goto("recording");
+    const ok = await mainRec.start();
+    if (ok) session.goto("recording");
   }, [mainRec, session]);
 
   const onStopRecording = useCallback(async () => {
     const result = await mainRec.stop();
-    if (!result) return;
-    session.setTargetRecording({ url: result.url, blob: result.blob });
-    session.goto("analyzing");
-    await runAnalysisAndDiagnosis(result);
-  }, [mainRec, session]);
+    if (result) await handleMainFinish(result);
+  }, [mainRec, handleMainFinish]);
 
   const runAnalysisAndDiagnosis = useCallback(
     async (target: Recording) => {
@@ -128,7 +137,11 @@ export default function App() {
   const onExitReference = useCallback(() => setMode("main"), []);
 
   const onBeginReferenceCapture = useCallback(async () => {
-    await refRec.start();
+    const ok = await refRec.start();
+    if (!ok) {
+      // Stay on the reference screen; the hook surfaces its own error.
+      return;
+    }
   }, [refRec]);
 
   const onStopReferenceCapture = useCallback(async () => {

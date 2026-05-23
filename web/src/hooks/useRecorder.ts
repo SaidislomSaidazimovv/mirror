@@ -4,10 +4,12 @@
  * Returns:
  *   - state: idle / recording / processing
  *   - liveSamples: short RMS history for the waveform component
- *   - start() / stop() — async; stop resolves with a Recording
+ *   - start() / stop() — async; start resolves with true on success;
+ *                       stop resolves with a Recording or null.
  *
- * The mic is requested lazily on start() and torn down on stop(). We tap
- * the analyser node for live RMS so the waveform reacts in real time.
+ * Auto-stop: when elapsed reaches maxSeconds the hook calls the caller's
+ * onFinish callback with the recording. Without that, the auto-stopped
+ * recording would be discarded and the UI would silently stall.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -22,17 +24,26 @@ export interface UseRecorderResult {
   error: string | null;
   liveSamples: number[];
   elapsed: number;
-  start: () => Promise<void>;
+  start: () => Promise<boolean>;
   stop: () => Promise<Recording | null>;
 }
 
-export function useRecorder(maxSeconds = 8): UseRecorderResult {
+export function useRecorder(
+  maxSeconds = 8,
+  onFinish?: (recording: Recording) => void
+): UseRecorderResult {
   const recorderRef = useRef<Recorder | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const startedAtRef = useRef<number>(0);
+  // Latest callback reference — avoid stale closures when the parent
+  // re-renders with a new onFinish.
+  const onFinishRef = useRef(onFinish);
+  useEffect(() => {
+    onFinishRef.current = onFinish;
+  }, [onFinish]);
 
   const [state, setState] = useState<RecorderState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +65,25 @@ export function useRecorder(maxSeconds = 8): UseRecorderResult {
 
   useEffect(() => () => teardown(), [teardown]);
 
+  const finalize = useCallback(async (): Promise<Recording | null> => {
+    const rec = recorderRef.current;
+    if (!rec) return null;
+    setState("processing");
+    try {
+      const result = await rec.stop();
+      recorderRef.current = null;
+      teardown();
+      setState("idle");
+      return result;
+    } catch (e) {
+      console.error(e);
+      setError("Could not finalize the recording.");
+      setState("error");
+      teardown();
+      return null;
+    }
+  }, [teardown]);
+
   const tick = useCallback(() => {
     const analyser = analyserRef.current;
     if (!analyser) return;
@@ -71,15 +101,16 @@ export function useRecorder(maxSeconds = 8): UseRecorderResult {
     setElapsed(e);
 
     if (e >= maxSeconds) {
-      // Soft stop via the public stop() so cleanup is consistent.
-      void stopAndDeliver();
+      // Auto-stop: deliver the recording to the caller so the UI advances.
+      void finalize().then((result) => {
+        if (result && onFinishRef.current) onFinishRef.current(result);
+      });
       return;
     }
     rafRef.current = requestAnimationFrame(tick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxSeconds]);
+  }, [maxSeconds, finalize]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (): Promise<boolean> => {
     setError(null);
     setLiveSamples([]);
     setElapsed(0);
@@ -103,33 +134,17 @@ export function useRecorder(maxSeconds = 8): UseRecorderResult {
       startedAtRef.current = performance.now();
       setState("recording");
       rafRef.current = requestAnimationFrame(tick);
+      return true;
     } catch (e) {
       console.error(e);
       setError("Microphone access was denied or no device is available.");
       setState("error");
-    }
-  }, [tick]);
-
-  const stopAndDeliver = useCallback(async (): Promise<Recording | null> => {
-    const rec = recorderRef.current;
-    if (!rec) return null;
-    setState("processing");
-    try {
-      const result = await rec.stop();
-      recorderRef.current = null;
       teardown();
-      setState("idle");
-      return result;
-    } catch (e) {
-      console.error(e);
-      setError("Could not finalize the recording.");
-      setState("error");
-      teardown();
-      return null;
+      return false;
     }
-  }, [teardown]);
+  }, [tick, teardown]);
 
-  const stop = useCallback(() => stopAndDeliver(), [stopAndDeliver]);
+  const stop = useCallback(() => finalize(), [finalize]);
 
   return { state, error, liveSamples, elapsed, start, stop };
 }

@@ -140,6 +140,13 @@ The ShengAI implementation lives on the `main` branch as a fallback. OVOZ lives 
 
 We make no medical claims, no learning-outcome guarantees, no grading guarantees. The product is a diagnostic visualization, not a certified teacher.
 
+### Known limitations (honest)
+
+- **ElevenLabs key is optional in this build.** When unset, `/api/clone` and `/api/synth` return a `demo-fallback` placeholder and the frontend falls back to a pre-rendered MP3 in `web/public/demo-audio/` (curated per sentence). The wow moment of "your own voice" only fires when the key is configured.
+- **L1 detection is scripted**, not learned. See *The L1 Cheat* above.
+- **MediaPipe Face Mesh wiring is partial.** The mirror stage renders a static target lip silhouette and a timed alignment indicator instead of a live 468-landmark mesh. We document this rather than overclaim.
+- **No persistence.** Attempts live in memory for the duration of the tab — there's no account, no history, no telemetry.
+
 ### Failure modes
 
 | Failure | Mitigation |
@@ -185,9 +192,8 @@ sheganai/
 │   │       └── session.ts          # Zustand state machine
 │   └── package.json
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── DEMO_SCRIPT.md             # 4-minute pitch walkthrough
-│   └── PROMPTS.md                 # External LLM disclosure
+│   ├── DEV_HANDOVER.md            # Locked engineering plan (the source of truth)
+│   └── DECK_SCRIPT.md             # 10-slide pitch script + demo choreography
 ├── vercel.json
 ├── .env.example
 ├── LICENSE                        # MIT
