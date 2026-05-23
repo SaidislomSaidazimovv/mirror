@@ -18,6 +18,7 @@ export type Stage =
   | "recording"
   | "analyzing"
   | "diagnosis"
+  | "no_speech"
   | "golden"
   | "mirror"
   | "resolved"
@@ -74,7 +75,17 @@ interface SessionState {
 
   phonemeHits: PhonemeHit[];
   triggeredPhoneme: string | null;
-  setMddResult: (hits: PhonemeHit[], trigger: string | null) => void;
+  /** Phoneme index inside expectedPhonemes (so AnalyzingStage can flash the right cell). */
+  triggeredPhonemeIdx: number | null;
+  setMddResult: (hits: PhonemeHit[], trigger: string | null, idx: number | null) => void;
+
+  /** What the ASR (browser OR Whisper) actually heard. Empty if no-speech. */
+  lastTranscript: string;
+  setLastTranscript: (t: string) => void;
+
+  /** Which engine produced the transcript — surfaced in the UI for honesty. */
+  asrProvider: "browser" | "huggingface" | "none";
+  setAsrProvider: (p: "browser" | "huggingface" | "none") => void;
 
   golden: GoldenClip | null;
   setGolden: (g: GoldenClip | null) => void;
@@ -101,6 +112,9 @@ export const useSession = create<SessionState>((set) => ({
       targetRecording: null,
       phonemeHits: [],
       triggeredPhoneme: null,
+      triggeredPhonemeIdx: null,
+      lastTranscript: "",
+      asrProvider: "none",
       golden: null,
     }),
 
@@ -115,7 +129,15 @@ export const useSession = create<SessionState>((set) => ({
 
   phonemeHits: [],
   triggeredPhoneme: null,
-  setMddResult: (phonemeHits, triggeredPhoneme) => set({ phonemeHits, triggeredPhoneme }),
+  triggeredPhonemeIdx: null,
+  setMddResult: (phonemeHits, triggeredPhoneme, triggeredPhonemeIdx) =>
+    set({ phonemeHits, triggeredPhoneme, triggeredPhonemeIdx }),
+
+  lastTranscript: "",
+  setLastTranscript: (lastTranscript) => set({ lastTranscript }),
+
+  asrProvider: "none",
+  setAsrProvider: (asrProvider) => set({ asrProvider }),
 
   golden: null,
   setGolden: (golden) => set({ golden }),

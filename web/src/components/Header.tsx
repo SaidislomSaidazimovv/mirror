@@ -6,6 +6,7 @@ const STAGE_LABEL: Record<Stage, string> = {
   recording: "RECORDING",
   analyzing: "ANALYZING",
   diagnosis: "DIAGNOSIS",
+  no_speech: "NO SIGNAL",
   golden: "GOLDEN VOICE",
   mirror: "MIRROR",
   resolved: "RESOLVED",

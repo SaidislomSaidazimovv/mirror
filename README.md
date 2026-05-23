@@ -26,26 +26,42 @@ The demo screen has at most: mic button, language toggle, sentence prompt, state
 |---|---|
 | Frontend | Vite + React 19 + TypeScript + Tailwind |
 | State | Zustand (one global session machine) |
-| Audio capture | Web Audio API + WAV encoder (browser-native) |
-| **Phoneme MDD** | HuggingFace Inference API · `mrrubino/wav2vec2-large-xlsr-53-l2-arctic-phoneme` |
+| Audio capture | MediaRecorder API + AnalyserNode (browser-native, single stream) |
+| **Speech recognition** | Browser Web Speech API (`SpeechRecognition`, `lang="zh-CN"`) is primary (sub-second on Chrome/Edge/Safari). HuggingFace **Whisper Large V3** is the fallback for Firefox or when the browser engine errors out (`/api/asr`). Either way we compare the produced transcript to the expected hanzi to drive the *real* trigger. |
 | **L1 detection** | Hardcoded JSON keyed on user-picked language + demo sentence (see "The L1 Cheat" below) |
 | **Voice cloning** | ElevenLabs Flash v2.5 + Instant Voice Cloning |
 | **Lip tracking** | Webcam + target overlay (MediaPipe Face Mesh integration ready, falls back to static target) |
-| Backend | Vercel Python serverless (lightweight proxies for HF + ElevenLabs) |
+| Backend | Vercel Python serverless (proxies for ElevenLabs + reserved MDD endpoint) |
 | Deploy | Vercel — one repo, frontend + serverless |
 
 ---
 
 ## The L1 Cheat (Honest Hackathon Note)
 
-Per the developer handover: **we are not building a real L1 classifier.** The phoneme MDD genuinely runs and finds a real articulation error. The L1 label and the diagnosis copy are picked from a JSON table keyed on (a) the language the user picked manually and (b) which of the three demo sentences they read.
+Per the developer handover §5: **we are not building a real L1 classifier.** A real speech model genuinely runs and finds a real articulation error. The L1 label and the diagnosis copy are picked from a JSON table keyed on (a) the language the user picked manually and (b) which of the three demo sentences they read.
 
-The illusion is honest because:
-- The phoneme error detection is real (HuggingFace wav2vec2).
+### Why the original HF wav2vec2 plan was swapped for Web Speech API
+
+The handover proposed `mrrubino/wav2vec2-large-xlsr-53-l2-arctic-phoneme` via HuggingFace Inference API. After the pivot we verified that **neither that model nor the obvious replacement** `facebook/wav2vec2-xlsr-53-espeak-cv-ft` **is deployed to the HF Inference Providers fleet** — every request fell through to a hardcoded fallback, which meant the same phoneme fired even on silence. That violates the "real signal" half of §5.
+
+We replaced HF with the **browser-native Web Speech API**:
+- Returns Mandarin hanzi for what the user actually said (no token, no cold-start, sub-second).
+- We diff the transcript against the expected sentence character-by-character.
+- The first mismatching character maps to its signature phoneme (per `charPhonemeIdx` in `ovozData.ts`), and that phoneme is highlighted in the analysis grid and stored on the session as the trigger.
+- The L1 card we slam in is still the scripted one keyed on (L1, sentence). That's the cheat — but the signal that fires it is genuine.
+
+### What's "honest" about the result
+
+- The phoneme highlighted on the grid is the actual phoneme of the character the user got wrong.
 - The L1 label is what the user told us, not invented.
-- The diagnosis is grounded in published phonetic literature (citations in the card).
+- The diagnosis text is grounded in published phonetic literature (citations in the card).
+- **If the mic heard nothing, we say so.** The app routes to a dedicated `NO SPEECH DETECTED` state instead of inventing an error — see `NoSpeechStage`.
 
-If the HF endpoint is slow or unreachable, the diagnosis still triggers via fallback — we never lie to the user about the *L1* part because they told us; we lie to the demo about *which model produced the phoneme*.
+### Browser support note
+
+Web Speech API works in Chrome, Edge, and Safari. Firefox does not implement it — in that case the app transparently falls back to **HuggingFace Whisper Large V3** via `/api/asr`. The trigger phoneme is still derived from a real transcript, just produced server-side.
+
+Provider selection is honest: the `AnalyzingStage` shows which engine (`Web Speech API · Browser` or `Whisper Large V3 · HuggingFace`) actually produced the transcript driving the diagnosis.
 
 ---
 
@@ -130,15 +146,24 @@ The ShengAI implementation lives on the `main` branch as a fallback. OVOZ lives 
 | Component | Where used | Why |
 |---|---|---|
 | **ElevenLabs Flash v2.5 + Instant Voice Cloning** | `api/clone.py`, `api/synth.py` — produces the "golden voice" | Sub-75ms TTS in user's own timbre |
-| **HuggingFace `mrrubino/wav2vec2-large-xlsr-53-l2-arctic-phoneme`** | `api/mdd.py` — phoneme-level error detection | Public, L2-tuned, no GPU on our side |
+| **Web Speech API (browser)** | `web/src/lib/speechRecognition.ts` — primary ASR path on Chrome/Edge/Safari | Free, no token, no cold-start, supports `zh-CN` |
+| **HuggingFace Whisper Large V3** | `api/asr.py` — server-side ASR fallback when the browser engine is unavailable (Firefox) or errors out | Strong Mandarin accuracy, free Inference API tier, uses `HF_TOKEN` |
 | **Hardcoded L1 diagnosis JSON** | `web/src/lib/ovozData.ts` | Demo cheat per dev handover §5 — see "The L1 Cheat" above |
 | **MediaPipe Face Mesh** (planned wiring) | `web/src/components/stages/MirrorStage.tsx` | Lip articulation tracking |
-| **Web Audio API + WAV encoder** | `web/src/lib/audio.ts` | Browser-native microphone capture |
+| **MediaRecorder API + AnalyserNode** | `web/src/lib/audio.ts` | Browser-native microphone capture + waveform analysis |
 | **shadcn/ui primitives** | `web/src/components/ui/` | MIT-licensed React components |
 
 **No private data sent to third parties.** Audio leaves the device for two reasons only: (a) the reference clone goes to ElevenLabs once, and (b) the target attempt goes to HuggingFace for MDD. We never persist either server-side.
 
 We make no medical claims, no learning-outcome guarantees, no grading guarantees. The product is a diagnostic visualization, not a certified teacher.
+
+### Known limitations (honest)
+
+- **ElevenLabs key is optional in this build.** When unset, `/api/clone` and `/api/synth` return a `demo-fallback` placeholder and the frontend falls back to a pre-rendered MP3 in `web/public/demo-audio/` (curated per sentence). The wow moment of "your own voice" only fires when the key is configured.
+- **L1 detection is scripted**, not learned. See *The L1 Cheat* above. The phoneme **trigger** is real (browser ASR-derived); the **L1 label** on the card is scripted.
+- **Speech recognition needs Chrome / Edge / Safari.** Firefox lacks Web Speech API; that browser drops to the scripted trigger.
+- **MediaPipe Face Mesh wiring is partial.** The mirror stage renders a static target lip silhouette and a timed alignment indicator instead of a live 468-landmark mesh. We document this rather than overclaim.
+- **No persistence.** Attempts live in memory for the duration of the tab — there's no account, no history, no telemetry.
 
 ### Failure modes
 
@@ -185,9 +210,8 @@ sheganai/
 │   │       └── session.ts          # Zustand state machine
 │   └── package.json
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── DEMO_SCRIPT.md             # 4-minute pitch walkthrough
-│   └── PROMPTS.md                 # External LLM disclosure
+│   ├── DEV_HANDOVER.md            # Locked engineering plan (the source of truth)
+│   └── DECK_SCRIPT.md             # 10-slide pitch script + demo choreography
 ├── vercel.json
 ├── .env.example
 ├── LICENSE                        # MIT

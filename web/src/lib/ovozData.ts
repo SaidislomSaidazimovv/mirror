@@ -30,6 +30,12 @@ export interface DemoSentence {
   translation: string;
   /** IPA phonemes the MDD model produces — used as the visible grid during ANALYZING. */
   expectedPhonemes: string[];
+  /**
+   * For each hanzi character, the starting index in `expectedPhonemes`.
+   * Used to map an ASR character-level mismatch to the prominent phoneme
+   * we highlight on the analyzing grid.
+   */
+  charPhonemeIdx: number[];
   diagnoses: Record<L1, Diagnosis>;
 }
 
@@ -40,6 +46,7 @@ export const DEMO_SENTENCES: DemoSentence[] = [
     pinyin: "wǒ xǐhuan xué zhōngwén",
     translation: "I like learning Chinese.",
     expectedPhonemes: ["w", "ɔ", "ɕ", "i", "x", "u", "an", "ɕ", "y", "e", "ʈʂ", "ʊ", "ŋ", "w", "ə", "n"],
+    charPhonemeIdx: [0, 2, 4, 7, 10, 13],
     diagnoses: {
       russian: {
         headline: "RUSSIAN L1 DETECTED",
@@ -63,6 +70,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
     pinyin: "nǐ hǎo, wǒ jiào lǐ míng",
     translation: "Hello, my name is Li Ming.",
     expectedPhonemes: ["n", "i", "x", "au", "w", "ɔ", "tɕ", "i", "au", "l", "i", "m", "i", "ŋ"],
+    // Note: comma in hanzi is filtered by findFirstMismatch, so character
+    // indices effectively are: 你=0, 好=1, 我=2, 叫=3, 李=4, 明=5.
+    charPhonemeIdx: [0, 2, 4, 6, 9, 11],
     diagnoses: {
       russian: {
         headline: "RUSSIAN L1 DETECTED",
@@ -86,6 +96,8 @@ export const DEMO_SENTENCES: DemoSentence[] = [
     pinyin: "zhè shì yí gè lǜsè de yǔsǎn",
     translation: "This is a green umbrella.",
     expectedPhonemes: ["ʈʂ", "ɤ", "ʂ", "ɻ", "i", "k", "ɤ", "l", "y", "s", "ɤ", "t", "ɤ", "y", "s", "an"],
+    // 这=0, 是=2, 一=4 ([i] alone), 个=5, 绿=7, 色=9, 的=11, 雨=13, 伞=14.
+    charPhonemeIdx: [0, 2, 4, 5, 7, 9, 11, 13, 14],
     diagnoses: {
       russian: {
         headline: "RUSSIAN L1 DETECTED",

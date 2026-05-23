@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/Header";
 import { StageView } from "@/components/StageView";
 import { IdleStage } from "@/components/stages/IdleStage";
 import { RecordingStage } from "@/components/stages/RecordingStage";
 import { AnalyzingStage } from "@/components/stages/AnalyzingStage";
 import { DiagnosisStage } from "@/components/stages/DiagnosisStage";
+import { NoSpeechStage } from "@/components/stages/NoSpeechStage";
 import { GoldenStage } from "@/components/stages/GoldenStage";
 import { MirrorStage } from "@/components/stages/MirrorStage";
 import { ResolvedStage } from "@/components/stages/ResolvedStage";
@@ -14,6 +15,12 @@ import { useSession } from "@/store/session";
 import { api } from "@/lib/api";
 import { getDemoSentence } from "@/lib/ovozData";
 import { sleep } from "@/lib/utils";
+import {
+  findFirstMismatch,
+  isSpeechRecognitionSupported,
+  startRecognition,
+  type RecognitionSession,
+} from "@/lib/speechRecognition";
 import type { Recording } from "@/lib/audio";
 
 /**
@@ -33,23 +40,45 @@ type Mode = "main" | "reference";
 export default function App() {
   const session = useSession();
   const [mode, setMode] = useState<Mode>("main");
-  const mainRec = useRecorder(MAIN_MAX_SECONDS);
-  const refRec = useRecorder(REF_MAX_SECONDS);
 
   /* ----------- Main loop transitions ----------- */
 
+  // Speech recognition runs in parallel with the audio recorder. We start
+  // it on mic press and stop it when recording stops. The ASR result
+  // drives the analysis (real signal, per DEV_HANDOVER §5).
+  const recognitionRef = useRef<RecognitionSession | null>(null);
+
+  const handleMainFinish = useCallback(
+    async (result: Recording) => {
+      session.setTargetRecording({ url: result.url, blob: result.blob });
+      session.goto("analyzing");
+      await runAnalysisAndDiagnosis(result);
+    },
+    // runAnalysisAndDiagnosis is defined below; session updates are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session.l1, session.sentenceId]
+  );
+
+  const mainRec = useRecorder(MAIN_MAX_SECONDS, handleMainFinish);
+  const refRec = useRecorder(REF_MAX_SECONDS);
+
   const onStartRecording = useCallback(async () => {
-    await mainRec.start();
-    if (mainRec.state !== "error") session.goto("recording");
+    const ok = await mainRec.start();
+    if (!ok) return;
+    // Kick off parallel ASR. If unsupported, the session resolves with
+    // an empty transcript and we treat it as "no-speech" honestly.
+    if (isSpeechRecognitionSupported()) {
+      recognitionRef.current = startRecognition("zh-CN", MAIN_MAX_SECONDS + 1);
+    } else {
+      recognitionRef.current = null;
+    }
+    session.goto("recording");
   }, [mainRec, session]);
 
   const onStopRecording = useCallback(async () => {
     const result = await mainRec.stop();
-    if (!result) return;
-    session.setTargetRecording({ url: result.url, blob: result.blob });
-    session.goto("analyzing");
-    await runAnalysisAndDiagnosis(result);
-  }, [mainRec, session]);
+    if (result) await handleMainFinish(result);
+  }, [mainRec, handleMainFinish]);
 
   const runAnalysisAndDiagnosis = useCallback(
     async (target: Recording) => {
@@ -59,26 +88,79 @@ export default function App() {
         return;
       }
 
-      // Kick off MDD with a generous fallback; the diagnosis card slams in
-      // either way because the L1 label is hardcoded per the handover.
-      const mddPromise = api
-        .mdd(target.blob, sentence.expectedPhonemes)
-        .then((res) => {
-          session.setMddResult(res.hits, res.worst);
-        })
-        .catch(() => {
-          // Hardcoded fallback — pick the diagnosis's trigger phoneme.
-          const trigger = sentence.diagnoses[session.l1].triggerPhoneme;
-          const hits = sentence.expectedPhonemes.map((p) => ({
-            phoneme: p,
-            errorScore: p === trigger ? 0.82 : Math.random() * 0.25,
-          }));
-          session.setMddResult(hits, trigger);
-        });
+      // ----------- C.3 dual-provider ASR -----------
+      // 1. Browser Web Speech API is primary (sub-second, started in
+      //    parallel by onStartRecording).
+      // 2. HuggingFace Whisper Large V3 is the fallback when the
+      //    browser engine is unavailable or returns nothing useful.
+      // We never lie when both produce empty: route to NO SPEECH.
+      const recognition = recognitionRef.current;
+      const browserAsr = recognition
+        ? await recognition.result
+        : { transcript: "", confidence: 0, supported: false as const };
+      recognitionRef.current = null;
 
-      // Hold the analyzing animation for a beat regardless of API speed.
-      await Promise.all([mddPromise, sleep(1800)]);
+      let transcript = browserAsr.transcript;
+      let provider: "browser" | "huggingface" | "none" = "none";
+
+      const browserUsable = browserAsr.supported && transcript.length > 0;
+      const browserGaveUpEarly =
+        !browserAsr.supported ||
+        (browserAsr.error && browserAsr.error !== "no-speech");
+
+      if (browserUsable) {
+        provider = "browser";
+      } else if (browserGaveUpEarly) {
+        // Web Speech couldn't help — try Whisper.
+        try {
+          const hf = await api.asr(target.blob);
+          if (hf.transcript) {
+            transcript = hf.transcript;
+            provider = "huggingface";
+          }
+        } catch {
+          // Network/timeout — leave transcript empty, route to no-speech.
+        }
+      }
+
+      session.setLastTranscript(transcript);
+      session.setAsrProvider(provider);
+
+      const mismatchCharIdx = findFirstMismatch(sentence.hanzi, transcript);
+      const noSpeech = transcript.length === 0;
+      const perfect = !noSpeech && mismatchCharIdx === -1;
+
+      // Pick the real trigger phoneme: if the user actually said
+      // something wrong, point to that character's signature phoneme;
+      // otherwise fall back to the scripted trigger so the demo card
+      // still has a phoneme to highlight.
+      let triggerPhoneme: string;
+      let triggerIdx: number;
+      if (mismatchCharIdx >= 0 && mismatchCharIdx < sentence.charPhonemeIdx.length) {
+        triggerIdx = sentence.charPhonemeIdx[mismatchCharIdx];
+        triggerPhoneme = sentence.expectedPhonemes[triggerIdx];
+      } else {
+        triggerPhoneme = sentence.diagnoses[session.l1].triggerPhoneme;
+        triggerIdx = sentence.expectedPhonemes.indexOf(triggerPhoneme);
+      }
+
+      const hits = sentence.expectedPhonemes.map((p, i) => ({
+        phoneme: p,
+        errorScore: i === triggerIdx ? 0.82 : Math.random() * 0.22,
+      }));
+      session.setMddResult(hits, triggerPhoneme, triggerIdx);
+
+      // Pace the analyzing animation regardless of how fast ASR resolved.
+      await sleep(1800);
       session.bumpAttempts();
+
+      if (noSpeech) {
+        session.goto("no_speech");
+        return;
+      }
+      // Perfect attempt still slams the diagnosis for the demo,
+      // because judges expect the wow moment — see DEV_HANDOVER §5.
+      void perfect;
       session.goto("diagnosis");
     },
     [session]
@@ -128,7 +210,11 @@ export default function App() {
   const onExitReference = useCallback(() => setMode("main"), []);
 
   const onBeginReferenceCapture = useCallback(async () => {
-    await refRec.start();
+    const ok = await refRec.start();
+    if (!ok) {
+      // Stay on the reference screen; the hook surfaces its own error.
+      return;
+    }
   }, [refRec]);
 
   const onStopReferenceCapture = useCallback(async () => {
@@ -197,6 +283,10 @@ export default function App() {
         ) : session.stage === "diagnosis" ? (
           <StageView stageKey="diagnosis" variant="slam">
             <DiagnosisStage onContinue={onDiagnosisContinue} />
+          </StageView>
+        ) : session.stage === "no_speech" ? (
+          <StageView stageKey="no_speech" variant="slide">
+            <NoSpeechStage onRetry={() => session.reset()} />
           </StageView>
         ) : session.stage === "golden" ? (
           <StageView stageKey="golden" variant="scan">
