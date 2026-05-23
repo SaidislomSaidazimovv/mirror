@@ -29,13 +29,21 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
 
         <div className="mt-16 flex flex-col items-center gap-6">
           <div className="relative">
+            <span
+              className="absolute inset-0 rounded-full bg-signal/15 mic-ping pointer-events-none"
+              aria-hidden
+            />
+            <span
+              className="absolute inset-0 rounded-full bg-signal/10 mic-ping pointer-events-none"
+              style={{ animationDelay: "600ms" }}
+              aria-hidden
+            />
             <button
               onClick={onStartRecording}
-              className="relative grid place-items-center w-32 h-32 rounded-full bg-signal text-fg hover:bg-signal-600 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-signal/30"
+              className="relative grid place-items-center w-32 h-32 rounded-full bg-signal text-fg hover:bg-signal-600 transition-[background,transform,box-shadow] duration-200 ease-out hover:scale-[1.04] hover:shadow-[0_0_0_8px_rgba(255,56,56,0.12),0_18px_60px_-12px_rgba(255,56,56,0.7)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-signal/30"
               aria-label="Start recording"
             >
               <Mic className="h-12 w-12" strokeWidth={1.5} />
-              <span className="absolute inset-0 rounded-full ring-2 ring-signal/60 animate-ping" aria-hidden />
             </button>
           </div>
 
@@ -68,7 +76,7 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
 
 function ReferenceCard({ ok, cloned, onStart }: { ok: boolean; cloned: boolean; onStart: () => void }) {
   return (
-    <div className="clinical-card p-5">
+    <div className="clinical-card clinical-card-interactive p-5">
       <div className="flex items-center justify-between mb-3">
         <span className="font-data text-[10px] uppercase tracking-[0.2em] text-fg/40">Step 0 · Reference</span>
         <Badge variant={ok ? "gold" : "signal"}>
@@ -89,7 +97,7 @@ function ReferenceCard({ ok, cloned, onStart }: { ok: boolean; cloned: boolean; 
 
 function BeliefCard() {
   return (
-    <div className="clinical-card p-5">
+    <div className="clinical-card clinical-card-interactive p-5">
       <div className="flex items-center justify-between mb-3">
         <span className="font-data text-[10px] uppercase tracking-[0.2em] text-fg/40">How it works</span>
         <span className="text-fg/30 inline-flex items-center gap-1">

@@ -6,27 +6,51 @@ import { getDemoSentence } from "@/lib/ovozData";
 
 /**
  * Clinical loading state — the calm before the diagnosis card slams in.
- * Phoneme boxes light up one at a time, suggesting machine perception is
- * marching through the utterance. A scan line sweeps top-to-bottom.
+ *
+ * Animation choreography (mirrors the timing in App.tsx where we hold
+ * for 1.8s before advancing to DIAGNOSIS):
+ *   0.0–1.2 s : scan-bar walks across all phonemes, lighting them up
+ *   1.2–1.8 s : everything goes muted, the trigger phoneme pulses red
+ *   1.8 s     : caller transitions away to DIAGNOSIS
+ *
+ * The trigger we pulse is the *diagnosis's* trigger phoneme (hardcoded
+ * per L1 + sentence), which keeps the analyzing visual consistent with
+ * the card that lands next. If the MDD response has come back with a
+ * different worst phoneme, App.tsx has already stored it; we use that
+ * when available and fall back to the script otherwise.
  */
 export function AnalyzingStage() {
   const sentenceId = useSession((s) => s.sentenceId);
+  const triggeredPhoneme = useSession((s) => s.triggeredPhoneme);
+  const l1 = useSession((s) => s.l1);
+
   const sentence = getDemoSentence(sentenceId);
   const phonemes = sentence?.expectedPhonemes ?? [];
 
-  const [active, setActive] = useState<number>(-1);
+  const triggerHardcoded = sentence?.diagnoses[l1].triggerPhoneme;
+  const trigger = triggeredPhoneme ?? triggerHardcoded ?? null;
+  const triggerIdx = trigger ? phonemes.indexOf(trigger) : -1;
+
+  const [scanIdx, setScanIdx] = useState(-1);
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
+    if (phonemes.length === 0) return;
     let i = 0;
-    const interval = setInterval(() => {
-      setActive(i);
-      i = (i + 1) % Math.max(phonemes.length, 1);
-    }, 110);
-    return () => clearInterval(interval);
+    const step = Math.max(50, Math.floor(1200 / phonemes.length));
+    const scanner = setInterval(() => {
+      setScanIdx(i);
+      i++;
+      if (i >= phonemes.length) {
+        clearInterval(scanner);
+        setTimeout(() => setSettled(true), 150);
+      }
+    }, step);
+    return () => clearInterval(scanner);
   }, [phonemes.length]);
 
   return (
-    <div className="container py-14 grid place-items-center">
+    <div className="container py-14 grid place-items-center animate-in fade-in duration-500">
       <div className="w-full max-w-3xl">
         <div className="flex items-center justify-between mb-10">
           <Badge variant="default">
@@ -40,36 +64,47 @@ export function AnalyzingStage() {
 
         <div className="text-center mb-12">
           <div className="font-stamp text-3xl tracking-tight text-fg/80">
-            Running differential phoneme analysis…
+            {settled ? "Anomaly located." : "Running differential phoneme analysis…"}
           </div>
           <div className="font-data text-fg/40 text-sm mt-3 uppercase tracking-[0.2em]">
-            Comparing produced vs expected articulation
+            {settled ? `Trigger · /${trigger}/` : "Comparing produced vs expected articulation"}
           </div>
         </div>
 
         <div className="relative clinical-card p-6 overflow-hidden">
-          {/* Scan line */}
-          <div
-            className="absolute inset-x-0 h-px bg-signal/80 animate-scan-line pointer-events-none"
-            aria-hidden
-          />
+          {/* Scan line — only while scanning */}
+          {!settled && (
+            <div
+              className="absolute inset-x-0 h-px bg-signal/80 animate-scan-line pointer-events-none"
+              aria-hidden
+            />
+          )}
 
           <div className="flex flex-wrap gap-2 justify-center">
-            {phonemes.map((p, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "min-w-[44px] h-12 grid place-items-center border font-data text-sm transition-colors",
-                  active === i
-                    ? "border-signal text-signal bg-signal/10"
-                    : active > i
-                    ? "border-fg/20 text-fg/80"
-                    : "border-line text-fg/30"
-                )}
-              >
-                /{p}/
-              </div>
-            ))}
+            {phonemes.map((p, i) => {
+              const isTrigger = settled && i === triggerIdx;
+              const isLitByScan = !settled && scanIdx >= i;
+              const isCurrent = !settled && scanIdx === i;
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "min-w-[44px] h-12 grid place-items-center border font-data text-sm transition-all duration-200",
+                    isTrigger
+                      ? "border-signal text-signal bg-signal/15 shadow-[0_0_0_1px_rgba(255,56,56,0.4)] animate-pulse"
+                      : isCurrent
+                      ? "border-signal text-signal bg-signal/10 scale-[1.04]"
+                      : isLitByScan
+                      ? "border-fg/30 text-fg/80"
+                      : settled
+                      ? "border-line text-fg/20"
+                      : "border-line text-fg/30"
+                  )}
+                >
+                  /{p}/
+                </div>
+              );
+            })}
           </div>
         </div>
 

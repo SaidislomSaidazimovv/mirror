@@ -69,5 +69,41 @@
   .clinical-card {
     border: 1px solid #2a2a2a;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+    transition: border-color 220ms ease-out, background 220ms ease-out;
   }
+
+  .clinical-card-interactive {
+    cursor: pointer;
+  }
+  .clinical-card-interactive:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
+  }
+}
+
+/* Smooth scroll across the app — keeps stage transitions calm. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Slightly tighten focus outline on every interactive primitive. */
+:focus-visible {
+  outline: 2px solid rgba(255, 56, 56, 0.7);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Mic button — softer ping than Tailwind's default. */
+@keyframes mic-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+.mic-ping {
+  animation: mic-ping 1800ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }

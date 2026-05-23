@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/components/Header";
+import { IntroOverlay } from "@/components/IntroOverlay";
+import { StageView } from "@/components/StageView";
 import { IdleStage } from "@/components/stages/IdleStage";
 import { RecordingStage } from "@/components/stages/RecordingStage";
 import { AnalyzingStage } from "@/components/stages/AnalyzingStage";
@@ -159,42 +161,61 @@ export default function App() {
   /* ----------- Render ----------- */
   return (
     <div className="min-h-screen flex flex-col bg-bg text-fg">
+      <IntroOverlay />
       <Header />
       <main className="flex-1 relative">
         {mode === "reference" ? (
-          <ReferenceStage
-            recording={refRec.state === "recording"}
-            liveSamples={refRec.liveSamples}
-            elapsed={refRec.elapsed}
-            maxSeconds={REF_MAX_SECONDS}
-            onStart={onBeginReferenceCapture}
-            onStop={onStopReferenceCapture}
-            onBack={onExitReference}
-          />
+          <StageView stageKey="reference" variant="slide">
+            <ReferenceStage
+              recording={refRec.state === "recording"}
+              liveSamples={refRec.liveSamples}
+              elapsed={refRec.elapsed}
+              maxSeconds={REF_MAX_SECONDS}
+              onStart={onBeginReferenceCapture}
+              onStop={onStopReferenceCapture}
+              onBack={onExitReference}
+            />
+          </StageView>
         ) : session.stage === "idle" ? (
-          <IdleStage
-            onStartRecording={onStartRecording}
-            onStartReference={onStartReference}
-          />
+          <StageView stageKey="idle" variant="slide">
+            <IdleStage
+              onStartRecording={onStartRecording}
+              onStartReference={onStartReference}
+            />
+          </StageView>
         ) : session.stage === "recording" ? (
-          <RecordingStage
-            liveSamples={mainRec.liveSamples}
-            elapsed={mainRec.elapsed}
-            maxSeconds={MAIN_MAX_SECONDS}
-            onStop={onStopRecording}
-          />
+          <StageView stageKey="recording" variant="scan">
+            <RecordingStage
+              liveSamples={mainRec.liveSamples}
+              elapsed={mainRec.elapsed}
+              maxSeconds={MAIN_MAX_SECONDS}
+              onStop={onStopRecording}
+            />
+          </StageView>
         ) : session.stage === "analyzing" ? (
-          <AnalyzingStage />
+          <StageView stageKey="analyzing" variant="fade">
+            <AnalyzingStage />
+          </StageView>
         ) : session.stage === "diagnosis" ? (
-          <DiagnosisStage onContinue={onDiagnosisContinue} />
+          <StageView stageKey="diagnosis" variant="slam">
+            <DiagnosisStage onContinue={onDiagnosisContinue} />
+          </StageView>
         ) : session.stage === "golden" ? (
-          <GoldenStage onContinue={onGoldenContinue} onRetry={() => session.reset()} />
+          <StageView stageKey="golden" variant="scan">
+            <GoldenStage onContinue={onGoldenContinue} onRetry={() => session.reset()} />
+          </StageView>
         ) : session.stage === "mirror" ? (
-          <MirrorStage onDone={onMirrorDone} onSkip={onMirrorDone} />
+          <StageView stageKey="mirror" variant="fade">
+            <MirrorStage onDone={onMirrorDone} onSkip={onMirrorDone} />
+          </StageView>
         ) : session.stage === "resolved" ? (
-          <ResolvedStage onAgain={onResolvedAgain} onNext={onResolvedNext} />
+          <StageView stageKey="resolved" variant="slide">
+            <ResolvedStage onAgain={onResolvedAgain} onNext={onResolvedNext} />
+          </StageView>
         ) : (
-          <ErrorView message={session.error ?? "Unknown error"} onReset={() => session.reset()} />
+          <StageView stageKey="error" variant="fade">
+            <ErrorView message={session.error ?? "Unknown error"} onReset={() => session.reset()} />
+          </StageView>
         )}
       </main>
       <Footer />
