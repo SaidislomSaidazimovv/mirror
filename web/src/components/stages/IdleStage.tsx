@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { Mic, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { SentencePrompt } from "@/components/SentencePrompt";
 import { useSession } from "@/store/session";
 import { DEMO_USER } from "@/data/demoUser";
+import { ease } from "@/motion/presets";
 
 interface Props {
   onStartRecording: () => void;
@@ -47,18 +49,40 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
               className="absolute -bottom-6 -right-6 w-10 h-10 mesh-corner pointer-events-none"
               aria-hidden
             />
-            <button
+            {/* v02 §6.2 mic spec:
+                 - 120px diameter circle
+                 - bg --fg-primary (near black)
+                 - subtle inset radial gradient
+                 - icon lucide Mic 36px white
+                 - idle breathing scale 1↔1.015 over 3s ease-in-out
+                 - hover scale 1.04 + shadow-3 (200ms)
+                 - press scale 0.96 (100ms) */}
+            <motion.button
               onClick={onStartRecording}
-              className="relative grid place-items-center w-32 h-32 rounded-full bg-signal text-fg hover:bg-signal-600 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              className="relative grid place-items-center w-30 h-30 rounded-full bg-fg text-bg shadow-2 transition-shadow duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 50% 35%, rgba(255,255,255,0.08) 0%, transparent 60%)",
+              }}
+              animate={{ scale: [1, 1.015, 1] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              whileHover={{
+                scale: 1.04,
+                transition: { duration: 0.2, ease: ease.out },
+              }}
+              whileTap={{
+                scale: 0.96,
+                transition: { duration: 0.1, ease: ease.out },
+              }}
               aria-label="Start recording"
             >
               {/* v02 §5.6 — subtle mesh dots inside the mic button. */}
               <span
-                className="absolute inset-2 rounded-full bg-mesh-dots opacity-50 pointer-events-none"
+                className="absolute inset-2 rounded-full bg-mesh-dots opacity-30 pointer-events-none"
                 aria-hidden
               />
-              <Mic className="h-12 w-12 relative" strokeWidth={1.5} />
-            </button>
+              <Mic className="h-9 w-9 relative" strokeWidth={1.5} />
+            </motion.button>
           </div>
 
           <div className="text-center">
@@ -105,7 +129,9 @@ function ReferenceCard({ ok, cloned, presetVoiceId, presetVoiceName, onStart }: 
   // Golden Voice step will work even without re-capturing.
   const hasPreset = !!presetVoiceId && !ok;
 
-  const badgeVariant = ok ? "gold" : hasPreset ? "gold" : "signal";
+  // v02 §5.2 color discipline: gold appears only when Golden Voice plays,
+  // never in IDLE state badges. Use default/signal variants here instead.
+  const badgeVariant: "default" | "signal" = ok ? "default" : hasPreset ? "default" : "signal";
   const badgeLabel = ok
     ? cloned
       ? "VOICE CLONED"

@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "sync-demo-voice": "node tools/sync-demo-voice.mjs"
+    "sync-demo-voice": "node tools/sync-demo-voice.mjs",
+    "prerender-demo-audio": "node tools/prerender-demo-audio.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.18",

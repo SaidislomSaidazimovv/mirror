@@ -4,17 +4,28 @@ import { cn } from "@/lib/utils";
 interface Props {
   /** RMS history, newest values appended last. */
   samples: number[];
-  tone?: "signal" | "gold" | "white";
+  tone?: "signal" | "gold" | "fg";
   variant?: "live" | "static";
   height?: number;
   /** Gain multiplier — clamped to [0, 1] after multiply. */
   gain?: number;
+  /** Bar width in px. v02 §6.3 uses 4 (recording), §6.6 uses 6 (golden). */
+  barWidth?: number;
+  /** Gap between bars in px. */
+  gap?: number;
+  /** Total number of bars. v02 §6.3 uses 30. */
+  bars?: number;
+  /** v02 §5.5 — gentle 1.2s pulse on the whole waveform (scale 1↔1.04). */
+  pulse?: boolean;
 }
 
-const COLORS: Record<"signal" | "gold" | "white", string> = {
-  signal: "#FF3838",
-  gold: "#D4A437",
-  white: "#FFFFFF",
+// v02 §5.2 — signal-red #E5484D (used in DIAGNOSIS / RECORDING),
+// gold #C8932E (used in GOLDEN VOICE), fg-primary #0A0A0A (default
+// bars on the light canvas).
+const COLORS: Record<"signal" | "gold" | "fg", string> = {
+  signal: "#E5484D",
+  gold: "#C8932E",
+  fg: "#0A0A0A",
 };
 
 /**
@@ -31,10 +42,14 @@ const COLORS: Record<"signal" | "gold" | "white", string> = {
  */
 export function Waveform({
   samples,
-  tone = "white",
+  tone = "fg",
   variant = "live",
   height = 80,
   gain = 18,
+  barWidth = 2,
+  gap = 2,
+  bars,
+  pulse = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -73,10 +88,11 @@ export function Waveform({
       smoothed[i] = prev;
     }
 
-    const barWidth = 2;
-    const gap = 2;
     const stride = barWidth + gap;
-    const barCount = Math.min(smoothed.length, Math.floor(clientWidth / stride));
+    // If `bars` is specified, cap the bar count to that exact number
+    // (v02 §6.3 = 30, §6.6 ~80). Otherwise fill all available width.
+    const maxBars = bars ?? Math.floor(clientWidth / stride);
+    const barCount = Math.min(smoothed.length, maxBars);
     const mid = clientHeight / 2;
     const usable = clientHeight - 6;
 
@@ -99,12 +115,17 @@ export function Waveform({
       ctx.fillRect(clientWidth - 6, mid - (h + 6) / 2, 4, h + 6);
       ctx.globalAlpha = 1;
     }
-  }, [samples, tone, gain]);
+  }, [samples, tone, gain, barWidth, gap, bars]);
 
   return (
     <canvas
       ref={canvasRef}
-      className={cn("w-full block", variant === "live" && "transition-opacity")}
+      className={cn(
+        "w-full block",
+        variant === "live" && "transition-opacity",
+        // v02 §5.5 — gentle 1.2s pulse on the whole waveform.
+        pulse && "animate-[waveformPulse_1200ms_ease-in-out_infinite]"
+      )}
       style={{ height }}
     />
   );

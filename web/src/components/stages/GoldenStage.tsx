@@ -37,6 +37,9 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
   const [done, setDone] = useState(false);
   const [audioMissing, setAudioMissing] = useState(false);
   const [pulse, setPulse] = useState<number[]>([]);
+  // Real audio duration once loaded — drives the "X.Xs synthesized" label
+  // beneath the waveform (Mirror DevHandover v02 §6.6).
+  const [durationSec, setDurationSec] = useState<number | null>(null);
 
   // Mirror DevHandover v02 §6.6: "On audio end: 400ms hold, then
   // transition to AVATAR_MIRROR." Ref so the timer keeps the latest
@@ -153,28 +156,55 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
           </span>
         </div>
 
+        {/* v02 §6.6 headline — text-display, two-line, hard left-justified
+            feel via center alignment. */}
         <div className="text-center mb-10">
-          <div className="font-stamp uppercase tracking-tighter text-fg/40 text-sm mb-3">
-            Same voice. Mandarin. Correct.
-          </div>
-          <div className="font-cjk text-5xl md:text-6xl text-gold leading-none">
+          <h1 className="font-stamp text-display text-fg leading-none">
+            YOUR VOICE.
+            <br />
+            PERFECT MANDARIN.
+          </h1>
+          <div className="font-cjk text-5xl md:text-6xl text-gold leading-none mt-8">
             {sentence?.hanzi}
           </div>
           <div className="font-data text-fg/60 mt-3">{sentence?.pinyin}</div>
         </div>
 
-        <div className="clinical-card p-6">
-          <div className="flex items-center justify-between mb-3 font-data text-[10px] uppercase tracking-[0.2em] text-fg/40">
+        {/* v02 §6.6 — gold glow on the waveform card. Uses --color-gold-glow
+            so the wash matches the spec colour. */}
+        <div
+          className="clinical-card p-6"
+          style={{
+            boxShadow:
+              "0 0 0 1px rgba(200,147,46,0.18), 0 12px 32px rgba(200,147,46,0.18), 0 1px 2px rgba(10,10,10,0.04)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-3 font-data text-micro uppercase tracking-[0.22em] text-fg/40">
             <span>Voice ID · {clone?.voiceId?.slice(0, 12) ?? "demo-fallback"}</span>
             <span className={audioMissing ? "text-signal" : "text-gold"}>
               {audioMissing ? "AUDIO MISSING" : playing ? "PLAYING" : "READY"}
             </span>
           </div>
-          <Waveform samples={pulse} tone="gold" height={100} />
+          {/* v02 §6.6 — 480px wide, 100px tall, bar 6px gap 6px,
+              pulse to keep the wave alive when audio is between RMS hits. */}
+          <div className="mx-auto" style={{ width: 480 }}>
+            <Waveform
+              samples={pulse}
+              tone="gold"
+              height={100}
+              barWidth={6}
+              gap={6}
+              pulse
+            />
+          </div>
           {golden?.url && (
             <audio
               ref={audioRef}
               src={golden.url}
+              onLoadedMetadata={(e) => {
+                const d = (e.currentTarget as HTMLAudioElement).duration;
+                if (Number.isFinite(d) && d > 0) setDurationSec(d);
+              }}
               onPlay={() => {
                 setPlaying(true);
                 setAudioMissing(false);
@@ -190,6 +220,19 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
               preload="auto"
             />
           )}
+        </div>
+
+        {/* v02 §6.6 — "● Same person · 7.2s synthesized" label below the
+            waveform. The duration is real, sourced from the audio element. */}
+        <div className="mt-4 flex items-center justify-center gap-2 font-data text-micro uppercase tracking-[0.22em] text-fg/60">
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full bg-gold"
+            aria-hidden
+          />
+          <span>
+            Same person ·{" "}
+            {durationSec !== null ? durationSec.toFixed(1) : "—"}s synthesized
+          </span>
         </div>
 
         {audioMissing && (

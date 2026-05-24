@@ -8,9 +8,10 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: "border border-line text-fg/60",
-        signal: "bg-signal/15 text-signal border border-signal/30",
+        signal: "bg-signal/10 text-signal border border-signal/30",
         gold: "bg-gold/10 text-gold border border-gold/30",
-        live: "bg-signal text-fg",
+        // Live badge — solid signal red with white text (page fg is now black).
+        live: "bg-signal text-white",
         ghost: "text-fg/40",
       },
     },

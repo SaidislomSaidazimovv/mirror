@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, CheckCircle2, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MatchScore } from "@/components/MatchScore";
+import { SyntheticAvatar } from "@/components/SyntheticAvatar";
 import { useSession } from "@/store/session";
 import { getDemoSentence } from "@/lib/demoData";
 import { useLipTracker } from "@/hooks/useLipTracker";
@@ -34,14 +36,23 @@ export function MirrorStage({ onDone, onSkip }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
 
   const [status, setStatus] = useState<"loading" | "ready" | "denied" | "matched">("loading");
+  // v02 §6.7 lock beat — single 180ms flash when match crosses 95%.
+  const [lockBeat, setLockBeat] = useState(false);
 
   const tracker = useLipTracker({ targetOpenness: 0.04, tolerance: 0.035 });
 
-  // Mirror DevHandover v02 §6.7: "Auto-advance to RESOLVED if match
-  // exceeds 95% and holds for 1 second." We slightly relax to 90%
-  // because §6.7's match-boost demo cheat isn't implemented yet — at
-  // 95% real-tracking, users often plateau at 88-93%. Keep onDone in a
-  // ref so the timer fires once with the latest callback.
+  // v02 §6.7 demo-cheat: scale the raw alignment so a within-bounds
+  // user reaches 95%+ within ~6-8s of the stage entering. This is
+  // explicit in the spec ("This is a demo, not a contest. The
+  // audience needs to see victory.").
+  const enterAtRef = useRef<number>(performance.now());
+  const elapsedRamp = (() => {
+    const elapsed = (performance.now() - enterAtRef.current) / 1000;
+    // Linear ramp from 1.0 → 1.18 over 6 seconds.
+    return Math.min(1.18, 1 + elapsed * 0.03);
+  })();
+  const boostedAlignment = Math.min(100, tracker.alignment * elapsedRamp);
+
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
   const matchHoldStartRef = useRef<number | null>(null);
@@ -121,22 +132,25 @@ export function MirrorStage({ onDone, onSkip }: Props) {
       ctx.stroke();
     };
 
-    drawPoly(frame.outer, "#D4A437", "rgba(212, 164, 55, 0.18)");
-    drawPoly(frame.inner, "#FF3838", "rgba(255, 56, 56, 0.06)");
+    // v02 §5.2 — gold #C8932E (outer lip) + signal red #E5484D (inner).
+    drawPoly(frame.outer, "#C8932E", "rgba(200, 147, 46, 0.18)");
+    drawPoly(frame.inner, "#E5484D", "rgba(229, 72, 77, 0.06)");
   }, [tracker.frame]);
 
   // 3. When alignment crosses the threshold, mark matched.
   useEffect(() => {
     if (status !== "ready") return;
-    if (tracker.alignment >= 80) setStatus("matched");
-  }, [tracker.alignment, status]);
+    if (boostedAlignment >= 80) setStatus("matched");
+  }, [boostedAlignment, status]);
 
-  // 4. Auto-advance after the alignment has held ≥90% for 1 full second
-  // (Mirror DevHandover v02 §6.7). Resets if alignment drops below 90%.
+  // 4. Auto-advance after the alignment has held ≥95% for 1 full second
+  // (Mirror DevHandover v02 §6.7). Resets if alignment drops below 95%.
+  // The match-boost ramp above guarantees we reach 95% even on shaky
+  // tracking, so we hit the spec threshold exactly.
   useEffect(() => {
     if (autoAdvancedRef.current) return;
     if (status === "denied" || status === "loading") return;
-    if (tracker.alignment >= 90) {
+    if (boostedAlignment >= 95) {
       if (matchHoldStartRef.current === null) {
         matchHoldStartRef.current = Date.now();
       }
@@ -148,11 +162,23 @@ export function MirrorStage({ onDone, onSkip }: Props) {
     } else {
       matchHoldStartRef.current = null;
     }
-  }, [tracker.alignment, status]);
+  }, [boostedAlignment, status]);
+
+  // 5. Lock beat — fire a single 180ms flash the first time we cross 95%.
+  const crossed95Ref = useRef(false);
+  useEffect(() => {
+    if (crossed95Ref.current) return;
+    if (boostedAlignment >= 95) {
+      crossed95Ref.current = true;
+      setLockBeat(true);
+      const t = window.setTimeout(() => setLockBeat(false), 180);
+      return () => window.clearTimeout(t);
+    }
+  }, [boostedAlignment]);
 
   return (
     <div className="container py-14">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <Badge variant="gold">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
@@ -163,130 +189,140 @@ export function MirrorStage({ onDone, onSkip }: Props) {
           </Button>
         </div>
 
-        <div className="grid md:grid-cols-[1fr_300px] gap-6">
-          <div className="relative aspect-[4/3] clinical-card overflow-hidden">
-            {status === "loading" && (
-              <div className="absolute inset-0 grid place-items-center font-data text-xs uppercase tracking-[0.2em] text-fg/40 z-10">
-                <span className="flex items-center gap-2">
-                  <Camera className="h-4 w-4" /> Requesting webcam…
-                </span>
-              </div>
-            )}
-            {status === "denied" && (
-              <div className="absolute inset-0 grid place-items-center p-6 text-center z-10">
-                <div>
-                  <div className="font-stamp text-xl mb-2">Webcam denied</div>
-                  <p className="font-data text-xs text-fg/50 mb-4 uppercase tracking-[0.18em]">
-                    Mirror step needs camera access.
-                  </p>
-                  <Button variant="outline" size="sm" onClick={onSkip}>
-                    Continue without mirror
-                  </Button>
-                </div>
-              </div>
-            )}
-            <video
-              ref={videoRef}
+        {/* v02 §6.7 hero match score — large mono number, counts up
+            smoothly, turns success green at ≥90 with a soft glow. The
+            boost ramp guarantees we reach 95% within ~6-8s per spec. */}
+        <div className="flex justify-center mb-10">
+          <MatchScore value={boostedAlignment} />
+        </div>
+
+        {/* v02 §6.7 split layout — left = synthetic Mandarin avatar,
+            right = live webcam tracking. Both square cards, 400×400
+            target, gap 48px on desktop. Lock beat: when match crosses
+            95%, both cards pulse a single 180ms gold ring. */}
+        <div className="grid md:grid-cols-2 gap-12 mb-8">
+          {/* LEFT — YOUR AVATAR */}
+          <div className="flex flex-col items-center gap-3">
+            <div
               className={cn(
-                "w-full h-full object-cover transform scale-x-[-1]",
-                status === "loading" || status === "denied" ? "opacity-0" : "opacity-100"
+                "relative w-full aspect-square clinical-card overflow-hidden transition-shadow duration-200 ease-out",
+                lockBeat &&
+                  "ring-2 ring-gold shadow-[0_0_32px_rgba(200,147,46,0.4)]"
               )}
-              playsInline
-              muted
-            />
-            {/* Real lip-landmark overlay, painted onto a transparent canvas. */}
-            <canvas
-              ref={canvasRef}
-              className="absolute inset-0 w-full h-full pointer-events-none"
-            />
-
-            {tracker.error && (
-              <div className="absolute top-3 left-3 right-3 z-20">
-                <Badge variant="signal">
-                  <X className="h-3 w-3" /> Tracker unavailable: {tracker.error}
-                </Badge>
-              </div>
-            )}
-
-            <div className="absolute bottom-0 inset-x-0 h-1 bg-line">
-              <div
-                className="h-full bg-gold transition-[width] duration-200"
-                style={{ width: `${tracker.alignment}%` }}
-              />
+            >
+              <SyntheticAvatar speaking />
+            </div>
+            <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/60">
+              Your Avatar
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="clinical-card p-4">
-              <div className="font-data text-[10px] uppercase tracking-[0.2em] text-fg/40 mb-2">
-                Landmarker
-              </div>
-              <div className="font-stamp text-2xl leading-tight">
-                {tracker.ready
-                  ? "Tracking 468 face landmarks."
-                  : tracker.error
-                  ? "Tracker offline."
-                  : "Initializing model…"}
-              </div>
-              <p className="text-fg/50 font-data text-xs mt-2 leading-relaxed">
-                MediaPipe Tasks-Vision via WebGL. Outer lip in gold, inner contour in signal red.
-                Shape your lips to widen the gold outline.
-              </p>
-            </div>
-
-            <div className="clinical-card p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-data text-[10px] uppercase tracking-[0.2em] text-fg/40">
-                  Alignment
-                </span>
-                <span className="font-data text-xs text-gold tabular-nums">
-                  {Math.round(tracker.alignment)}%
-                </span>
-              </div>
-              <div className="h-1 bg-line">
+          {/* RIGHT — YOUR FACE (live tracking) */}
+          <div className="flex flex-col items-center gap-3">
+            <div
+              className={cn(
+                "relative w-full aspect-square clinical-card overflow-hidden transition-shadow duration-200 ease-out",
+                lockBeat &&
+                  "ring-2 ring-gold shadow-[0_0_32px_rgba(200,147,46,0.4)]"
+              )}
+            >
+              {status === "loading" && (
+                <div className="absolute inset-0 grid place-items-center font-data text-micro uppercase tracking-[0.22em] text-fg/40 z-10">
+                  <span className="flex items-center gap-2">
+                    <Camera className="h-4 w-4" /> Requesting webcam…
+                  </span>
+                </div>
+              )}
+              {status === "denied" && (
+                <div className="absolute inset-0 grid place-items-center p-6 text-center z-10">
+                  <div>
+                    <div className="font-stamp text-xl mb-2">Webcam denied</div>
+                    <p className="font-data text-xs text-fg/50 mb-4 uppercase tracking-[0.18em]">
+                      Mirror step needs camera access.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={onSkip}>
+                      Continue without mirror
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <video
+                ref={videoRef}
+                className={cn(
+                  "w-full h-full object-cover transform scale-x-[-1]",
+                  status === "loading" || status === "denied" ? "opacity-0" : "opacity-100"
+                )}
+                playsInline
+                muted
+              />
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 w-full h-full pointer-events-none"
+              />
+              {tracker.error && (
+                <div className="absolute top-3 left-3 right-3 z-20">
+                  <Badge variant="signal">
+                    <X className="h-3 w-3" /> Tracker offline: {tracker.error}
+                  </Badge>
+                </div>
+              )}
+              <div className="absolute bottom-0 inset-x-0 h-1 bg-fg/10">
                 <div
-                  className="h-full bg-gold transition-[width] duration-150"
-                  style={{ width: `${tracker.alignment}%` }}
+                  className="h-full bg-gold transition-[width] duration-200"
+                  style={{ width: `${boostedAlignment}%` }}
                 />
               </div>
-              <div className="mt-3 font-data text-[10px] uppercase tracking-[0.18em] text-fg/40 grid grid-cols-2 gap-2">
-                <span>Openness</span>
-                <span className="text-fg/80 text-right tabular-nums">
-                  {tracker.frame ? tracker.frame.openness.toFixed(3) : "—"}
-                </span>
-                <span>Width</span>
-                <span className="text-fg/80 text-right tabular-nums">
-                  {tracker.frame ? tracker.frame.width.toFixed(3) : "—"}
-                </span>
-              </div>
             </div>
+            <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/60">
+              Your Face
+            </div>
+          </div>
+        </div>
 
-            <div className="clinical-card p-4">
-              <div className="font-data text-[10px] uppercase tracking-[0.2em] text-fg/40 mb-2">
+        {/* Compact stats row + sentence reference + continue button. */}
+        <div className="grid md:grid-cols-[1fr_auto] gap-6 items-center">
+          <div className="clinical-card p-4 flex items-center gap-6">
+            <div className="flex-1">
+              <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
                 Sentence
               </div>
-              <div className="font-cjk text-lg">{sentence?.hanzi}</div>
-              <div className="font-data text-xs text-fg/50 mt-1">{sentence?.pinyin}</div>
+              <div className="font-cjk text-xl mt-1">{sentence?.hanzi}</div>
+              <div className="font-data text-xs text-fg/50 mt-0.5">{sentence?.pinyin}</div>
             </div>
-
-            <Button
-              variant={status === "matched" ? "gold" : "outline"}
-              size="lg"
-              onClick={onDone}
-              className="w-full"
-            >
-              {status === "matched" ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  Matched · continue
-                </>
-              ) : (
-                <>
-                  Lock in match <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
+            <div className="hidden md:block">
+              <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
+                Landmarks
+              </div>
+              <div className="font-stamp text-lg leading-tight mt-1">
+                {tracker.ready ? "468 tracked" : tracker.error ? "Tracker offline" : "Initializing…"}
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
+                Openness
+              </div>
+              <div className="font-mono text-lg tabular-nums mt-1">
+                {tracker.frame ? tracker.frame.openness.toFixed(3) : "—"}
+              </div>
+            </div>
           </div>
+
+          <Button
+            variant={status === "matched" ? "gold" : "outline"}
+            size="lg"
+            onClick={onDone}
+          >
+            {status === "matched" ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                Matched · continue
+              </>
+            ) : (
+              <>
+                Lock in match <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

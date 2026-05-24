@@ -39,13 +39,15 @@ export function AITutorPanel({ onLanguageChange }: Props) {
 
   return (
     <div className="w-full max-w-2xl mx-auto mt-10">
-      <div className="hairline-gold mb-5" />
+      {/* v02 §5.2 color discipline — Tutor uses neutral fg, not gold,
+          since gold is reserved for the Golden Voice moment only. */}
+      <div className="hairline mb-5" />
 
       <div className="clinical-card p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-gold" strokeWidth={1.5} />
-            <span className="font-data text-[10px] uppercase tracking-[0.22em] text-fg/40">
+            <Sparkles className="h-3.5 w-3.5 text-fg/60" strokeWidth={1.5} />
+            <span className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
               AI Tutor · Gemini 2.0 Flash
             </span>
           </div>
@@ -58,9 +60,9 @@ export function AITutorPanel({ onLanguageChange }: Props) {
                 aria-selected={language === opt.code}
                 onClick={() => handleSwitch(opt.code)}
                 className={cn(
-                  "font-data text-[10px] uppercase tracking-[0.2em] h-7 px-2.5 border transition-colors duration-150 ease-out",
+                  "font-data text-micro uppercase tracking-[0.2em] h-7 px-2.5 border transition-colors duration-150 ease-out",
                   language === opt.code
-                    ? "border-gold text-gold"
+                    ? "border-fg text-fg"
                     : "border-line text-fg/40 hover:text-fg/70 hover:border-fg/30"
                 )}
               >
@@ -73,22 +75,22 @@ export function AITutorPanel({ onLanguageChange }: Props) {
         {loading ? (
           <div className="flex items-center gap-3 text-fg/40 font-data text-sm py-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
-            <span className="uppercase tracking-[0.18em] text-[11px]">Generating…</span>
+            <span className="uppercase tracking-[0.18em] text-meta">Generating…</span>
           </div>
         ) : tutor ? (
           <>
-            <p className="font-sans text-base text-fg/85 leading-relaxed mb-5">
+            <p className="font-sans text-body text-fg/85 leading-relaxed mb-5">
               {tutor.explanation}
             </p>
 
-            <div className="border-l-2 border-gold/60 pl-4 py-1">
-              <div className="font-data text-[10px] uppercase tracking-[0.22em] text-gold/80 mb-1">
+            <div className="border-l-2 border-fg/40 pl-4 py-1">
+              <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/60 mb-1">
                 Try this
               </div>
               <p className="font-sans text-sm text-fg/70 leading-relaxed">{tutor.tip}</p>
             </div>
 
-            <div className="mt-5 flex items-center justify-between font-data text-[10px] uppercase tracking-[0.2em] text-fg/30">
+            <div className="mt-5 flex items-center justify-between font-data text-micro uppercase tracking-[0.2em] text-fg/30">
               <span>
                 {tutor.source === "gemini" ? "Gemini · Live" : "Offline fallback"}
               </span>

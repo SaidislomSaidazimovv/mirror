@@ -45,7 +45,7 @@ export function DiagnosisStage({ onTutorLanguageChange, onContinue }: Props) {
 
   return (
     <div className="container py-14 grid place-items-center">
-      <DiagnosisCard diagnosis={diagnosis} hero />
+      <DiagnosisCard diagnosis={diagnosis} l1={l1} hero />
 
       <AITutorPanel onLanguageChange={onTutorLanguageChange} />
 

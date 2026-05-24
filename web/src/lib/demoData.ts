@@ -21,6 +21,18 @@ export interface Diagnosis {
   citation: string;
   /** The phoneme we expect the MDD to flag — guides the demo. */
   triggerPhoneme: string;
+  /**
+   * Mirror DevHandover v02 §6.5 phoneme shift box — expected (target)
+   * IPA versus what the user actually produced. Renders as a small
+   * inset card "expected → detected" beneath the headline.
+   */
+  phonemeShift: { expected: string; detected: string };
+  /**
+   * v02 §6.5 pattern counter ("Pattern 7 of 11 known Russian L1 →
+   * Mandarin error families"). Total varies by L1.
+   */
+  patternNumber: number;
+  patternTotal: number;
 }
 
 export interface DemoSentence {
@@ -36,6 +48,12 @@ export interface DemoSentence {
    * we highlight on the analyzing grid.
    */
   charPhonemeIdx: number[];
+  /**
+   * Per-character pinyin syllables (toneless ASCII OK, but tones look
+   * better). Drives the §6.4 ANALYZING tile grid — one tile per
+   * syllable. Order matches `hanzi` characters.
+   */
+  syllables: string[];
   diagnoses: Record<L1, Diagnosis>;
 }
 
@@ -47,6 +65,7 @@ export const DEMO_SENTENCES: DemoSentence[] = [
     translation: "I like learning Chinese.",
     expectedPhonemes: ["w", "ɔ", "ɕ", "i", "x", "u", "an", "ɕ", "y", "e", "ʈʂ", "ʊ", "ŋ", "w", "ə", "n"],
     charPhonemeIdx: [0, 2, 4, 7, 10, 13],
+    syllables: ["wǒ", "xǐ", "huan", "xué", "zhōng", "wén"],
     diagnoses: {
       russian: {
         headline: "RUSSIAN L1 DETECTED",
@@ -54,6 +73,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
         detail: "Your /ш/ is leaking through. Russian palatalizes where Mandarin retroflexes.",
         citation: "Chen et al. · Interspeech 2013",
         triggerPhoneme: "ʈʂ",
+        phonemeShift: { expected: "ʈʂ", detected: "ʐʲ" },
+        patternNumber: 7,
+        patternTotal: 11,
       },
       uzbek: {
         headline: "UZBEK L1 DETECTED",
@@ -61,6 +83,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
         detail: "Uzbek vowel inventory lacks the front-rounded /y/ contrast. Round your lips harder.",
         citation: "Chinese–Uzbek contrastive · IJEAT 2019",
         triggerPhoneme: "y",
+        phonemeShift: { expected: "y", detected: "u" },
+        patternNumber: 4,
+        patternTotal: 9,
       },
     },
   },
@@ -73,6 +98,7 @@ export const DEMO_SENTENCES: DemoSentence[] = [
     // Note: comma in hanzi is filtered by findFirstMismatch, so character
     // indices effectively are: 你=0, 好=1, 我=2, 叫=3, 李=4, 明=5.
     charPhonemeIdx: [0, 2, 4, 6, 9, 11],
+    syllables: ["nǐ", "hǎo", "wǒ", "jiào", "lǐ", "míng"],
     diagnoses: {
       russian: {
         headline: "RUSSIAN L1 DETECTED",
@@ -80,6 +106,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
         detail: "Russian intonation flattens consecutive tone 3s. The first nǐ must rise like tone 2.",
         citation: "Soloveva · Phonetica 2020",
         triggerPhoneme: "i",
+        phonemeShift: { expected: "T3+T3 → T2+T3", detected: "T3+T3" },
+        patternNumber: 2,
+        patternTotal: 11,
       },
       uzbek: {
         headline: "UZBEK L1 DETECTED",
@@ -87,6 +116,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
         detail: "Uzbek /j/ in jiào needs harder aspiration. Push more air through the alveolo-palatal.",
         citation: "Karimov · TKLT 2018",
         triggerPhoneme: "tɕ",
+        phonemeShift: { expected: "tɕʰ", detected: "tɕ" },
+        patternNumber: 3,
+        patternTotal: 9,
       },
     },
   },
@@ -98,6 +130,7 @@ export const DEMO_SENTENCES: DemoSentence[] = [
     expectedPhonemes: ["ʈʂ", "ɤ", "ʂ", "ɻ", "i", "k", "ɤ", "l", "y", "s", "ɤ", "t", "ɤ", "y", "s", "an"],
     // 这=0, 是=2, 一=4 ([i] alone), 个=5, 绿=7, 色=9, 的=11, 雨=13, 伞=14.
     charPhonemeIdx: [0, 2, 4, 5, 7, 9, 11, 13, 14],
+    syllables: ["zhè", "shì", "yí", "gè", "lǜ", "sè", "de", "yǔ", "sǎn"],
     diagnoses: {
       russian: {
         headline: "RUSSIAN L1 DETECTED",
@@ -105,6 +138,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
         detail: "Russian /у/ pulls lǜ toward /lu/. Front the tongue, keep lips rounded — two motions.",
         citation: "Zhang · L2 Speech 2020",
         triggerPhoneme: "y",
+        phonemeShift: { expected: "y", detected: "i" },
+        patternNumber: 8,
+        patternTotal: 11,
       },
       uzbek: {
         headline: "UZBEK L1 DETECTED",
@@ -112,6 +148,9 @@ export const DEMO_SENTENCES: DemoSentence[] = [
         detail: "Uzbek /sh/ is flatter. Curl the tongue, hold voicing through the consonant.",
         citation: "Akhmedova · IJAS 2021",
         triggerPhoneme: "ʂ",
+        phonemeShift: { expected: "ʈʂ", detected: "ʂ" },
+        patternNumber: 6,
+        patternTotal: 9,
       },
     },
   },
@@ -127,13 +166,15 @@ export const L1_LABELS: Record<L1, { code: string; name: string; nativeName: str
 };
 
 /**
- * Short reference sentences in each L1.
- * Recorded by the on-stage user to seed the ElevenLabs Instant Voice Clone
+ * Short reference sentences in each L1, taken verbatim from Mirror
+ * DevHandover v02 §6.1. Logistics + Chinese-partner framing matches
+ * §12 revenue narrative (B2B ВЭД teams trading with China). Recorded
+ * by the on-stage user to seed the ElevenLabs Instant Voice Clone
  * with pure timbre, untainted by Mandarin attempts.
  */
 export const REFERENCE_SCRIPTS: Record<L1, string> = {
   russian:
-    "Меня зовут [имя]. Я говорю по-русски каждый день. Сегодня я учусь произносить китайские слова правильно.",
+    "Меня зовут Акмаль. Я живу в Ташкенте и работаю в логистике. Каждый день я работаю с китайскими партнёрами.",
   uzbek:
-    "Mening ismim [ismingiz]. Men har kuni o'zbek tilida gapiraman. Bugun men xitoy tilini aniq talaffuz qilishni o'rganaman.",
+    "Mening ismim Akmal. Men Toshkentda yashayman va logistika sohasida ishlayman. Har kuni men xitoylik hamkorlar bilan ishlayman.",
 };

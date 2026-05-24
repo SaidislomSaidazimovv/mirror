@@ -36,11 +36,22 @@ export function RecordingStage({ liveSamples, elapsed, maxSeconds, onStop, label
         <SentencePrompt allowSwitch={false} />
 
         <div className="mt-12 clinical-card p-6">
-          <div className="flex items-center justify-between mb-3 font-data text-[10px] uppercase tracking-[0.2em] text-fg/40">
+          <div className="flex items-center justify-between mb-3 font-data text-meta uppercase tracking-[0.2em] text-fg/40">
             <span>Microphone · 16 kHz · mono</span>
             <span className="text-signal">REC</span>
           </div>
-          <Waveform samples={liveSamples} tone="signal" height={100} />
+          {/* v02 §6.3 — 240×80, 30 bars, bar 4px, gap 4px, gentle pulse. */}
+          <div className="mx-auto" style={{ width: 240 }}>
+            <Waveform
+              samples={liveSamples}
+              tone="signal"
+              height={80}
+              barWidth={4}
+              gap={4}
+              bars={30}
+              pulse
+            />
+          </div>
         </div>
 
         <div className="mt-10 flex flex-col items-center gap-3">

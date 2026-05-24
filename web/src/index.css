@@ -1,9 +1,14 @@
 /**
  * Tailwind v4 entrypoint. Per Mirror DevHandover v02 §2 + §12.2 the
  * config lives in CSS via the @theme directive — no tailwind.config.js
- * needed under v4. Dark tokens are preserved verbatim (the v02 spec
- * targets a light theme but we ship the existing clinical dark for the
- * hackathon — see NOTES.md §1c).
+ * needed under v4.
+ *
+ * Theme: LIGHT (Mirror v02 §5.1 + §5.2). "Mirror is what an Apple
+ * medical instrument looks like — clean, refined, everything earns
+ * its pixels." Warm off-white canvas (#FAFAF7), black-with-breath
+ * text (#0A0A0A), signal red used exactly twice in the whole product
+ * (DIAGNOSIS only), gold used exactly once (GOLDEN VOICE only),
+ * success green used exactly once (mirror match ≥ 90%).
  */
 @import "tailwindcss";
 
@@ -13,25 +18,49 @@
 @plugin "tailwindcss-animate";
 
 @theme {
-  /* Brand colors — preserved from v01 dark theme. */
-  --color-bg: #0a0a0a;
-  --color-fg: #ffffff;
+  /* ───────── Brand colors (v02 §5.2) ─────────
+     Legacy --color-bg / --color-fg / --color-line / --color-muted
+     names are kept so existing utilities (bg-bg, text-fg, border-line,
+     bg-muted) keep working but now resolve to the spec's light values. */
+  --color-bg:        #FAFAF7;  /* canvas — warm off-white */
+  --color-fg:        #0A0A0A;  /* primary text — black with breath */
+  --color-muted:     #F4F4F0;  /* subtle inset surfaces */
+  --color-muted-fg:  #525252;  /* fg-secondary */
+  --color-line:      rgba(10, 10, 10, 0.10); /* border-subtle */
 
-  --color-signal: #FF3838;
-  --color-signal-50: #FFE5E5;
-  --color-signal-100: #FFCCCC;
-  --color-signal-500: #FF3838;
-  --color-signal-600: #E61E1E;
+  /* Full spec token set — additive (used by new code paths). */
+  --color-canvas:    #FAFAF7;
+  --color-surface:   #FFFFFF;
+  --color-frosted:   rgba(255, 255, 255, 0.72);
+  --color-bg-muted:  #F4F4F0;
 
-  --color-gold: #D4A437;
-  --color-gold-50: #FBF1D7;
-  --color-gold-100: #F6E3AE;
-  --color-gold-500: #D4A437;
-  --color-gold-600: #B0871D;
+  --color-fg-primary:     #0A0A0A;
+  --color-fg-secondary:   #525252;
+  --color-fg-tertiary:    #A3A3A3;
+  --color-fg-quaternary:  #D4D4D4;
+  --color-fg-inverse:     #FAFAF7;
 
-  --color-muted: #1a1a1a;
-  --color-muted-fg: #6b6b6b;
-  --color-line: #2a2a2a;
+  --color-border-hairline: rgba(10, 10, 10, 0.06);
+  --color-border-subtle:   rgba(10, 10, 10, 0.10);
+  --color-border-default:  rgba(10, 10, 10, 0.18);
+
+  --color-signal:        #E5484D; /* signal-red — used in DIAGNOSIS only */
+  --color-signal-50:     #FDF2F2;
+  --color-signal-100:    #FBE2E3;
+  --color-signal-500:    #E5484D;
+  --color-signal-600:    #C72E33;
+  --color-signal-soft:   #FDF2F2;
+
+  --color-gold:        #C8932E; /* used in GOLDEN VOICE only */
+  --color-gold-50:     #FBF4E2;
+  --color-gold-100:    #F4E2A8;
+  --color-gold-500:    #C8932E;
+  --color-gold-600:    #A8791F;
+  --color-gold-soft:   #FBF4E2;
+  --color-gold-glow:   rgba(200, 147, 46, 0.18);
+
+  --color-success:      #16804A; /* used at mirror match ≥ 90% only */
+  --color-success-soft: #ECF6F0;
 
   /* Typography — per v02 §5.3 PP Neue Montreal is the protagonist,
      Switzer is the Fontshare-licensed fallback. Inter is forbidden. */
@@ -40,9 +69,13 @@
   --font-mono:    "JetBrains Mono", "Söhne Mono", ui-monospace, monospace;
   --font-cjk:     "Noto Sans SC", "PingFang SC", ui-sans-serif;
 
-  /* Custom tracking tokens used by the clinical display type. */
-  --tracking-tightest: -0.04em;
-  --tracking-tighter:  -0.025em;
+  /* Custom tracking tokens per v02 §5.3:
+       Display sizes (56px+): letter-spacing -0.03em
+       Body sizes:            letter-spacing -0.01em
+       Mono:                  letter-spacing 0 */
+  --tracking-tightest: -0.03em;   /* display protagonist sizes */
+  --tracking-tighter:  -0.025em;  /* legacy alias for upper-mid sizes */
+  --tracking-tight:    -0.01em;   /* body text refinement */
 
   /* Type scale per Mirror DevHandover v02 §5.3 — the only sizes a
      component should use. Tailwind v4 wires --text-{name} into the
@@ -80,6 +113,28 @@
   --text-micro--line-height: 1.3;
   --text-micro--font-weight: 500;
 
+  /* Shadows per v02 §5.2 — fine, never dramatic. */
+  --shadow-1:
+    0 1px 2px rgba(10, 10, 10, 0.04),
+    0 1px 1px rgba(10, 10, 10, 0.02);
+  --shadow-2:
+    0 4px 12px rgba(10, 10, 10, 0.06),
+    0 1px 3px rgba(10, 10, 10, 0.04);
+  --shadow-3:
+    0 16px 40px rgba(10, 10, 10, 0.08),
+    0 4px 12px rgba(10, 10, 10, 0.04);
+  --shadow-4:
+    0 32px 96px rgba(10, 10, 10, 0.12),
+    0 8px 24px rgba(10, 10, 10, 0.06);
+
+  /* Radii per v02 §5.2 — Apple-style generous curves. */
+  --radius-xs:  6px;
+  --radius-sm:  10px;
+  --radius-md:  16px;
+  --radius-lg:  24px;
+  --radius-xl:  32px;
+  --radius-2xl: 48px;
+
   /* Container — v3 had screens.2xl: 1440px override. v4 equivalent. */
   --container-2xl: 1440px;
 
@@ -106,6 +161,19 @@
   100% { width: 100%; }
 }
 
+/* v02 §6.5 — the L1-PATTERN-DETECTED red dot pulse. The only thing
+   moving once the diagnosis card has landed. */
+@keyframes diagnosisPulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.4; }
+}
+
+/* v02 §5.5 — waveform pulse: scale 1 ↔ 1.04 over 1.2s ease-in-out. */
+@keyframes waveformPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
 /* v4 `.container` is bare (just responsive max-width). Mirror
    DevHandover v02 §5.4 locks the container at 1200px max-width with
    48px horizontal padding on desktop. We pin both here so existing
@@ -118,15 +186,15 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   html,
   body,
   #root {
     height: 100%;
-    background: #0a0a0a;
-    color: #ffffff;
+    background: #FAFAF7;   /* v02 §5.2 --bg-canvas */
+    color: #0A0A0A;        /* v02 §5.2 --fg-primary */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "tnum" 1, "calt" 1;
@@ -137,12 +205,12 @@
   }
 
   * {
-    border-color: var(--color-line);
+    border-color: var(--color-border-subtle);
   }
 
   ::selection {
-    background: #FF3838;
-    color: #ffffff;
+    background: #E5484D;
+    color: #FFFFFF;
   }
 }
 
@@ -163,28 +231,28 @@
 
   .hairline {
     height: 1px;
-    background: #2a2a2a;
+    background: rgba(10, 10, 10, 0.10); /* border-subtle */
   }
 
   .hairline-gold {
     height: 1px;
-    background: linear-gradient(90deg, transparent 0%, #D4A437 30%, #D4A437 70%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, #C8932E 30%, #C8932E 70%, transparent 100%);
   }
 
   .bg-grid-fine {
     background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      linear-gradient(to right, rgba(10, 10, 10, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(10, 10, 10, 0.04) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
   /* Mirror DevHandover v02 §5.6 wireframe mesh motif:
-     2px circles, fg-tertiary at 40% opacity, on a 12px grid. The dark
-     theme uses white dots (the dark equivalent of "fg-tertiary"). */
+     2px circles, fg-tertiary at 40% opacity, on a 12px grid. On the
+     light canvas, fg-tertiary (#A3A3A3) at 40% is the right tone. */
   .bg-mesh-dots {
     background-image: radial-gradient(
       circle,
-      rgba(255, 255, 255, 0.16) 1px,
+      rgba(163, 163, 163, 0.4) 1px,
       transparent 1.5px
     );
     background-size: 12px 12px;
@@ -196,7 +264,7 @@
   .mesh-corner {
     background-image: radial-gradient(
       circle,
-      rgba(255, 255, 255, 0.22) 1px,
+      rgba(10, 10, 10, 0.22) 1px,
       transparent 1.5px
     );
     background-size: 8px 8px;
@@ -206,18 +274,26 @@
     text-wrap: balance;
   }
 
+  /* v02 §5.2: elevated cards sit on --bg-surface (#FFFFFF) with a
+     hairline border. Light canvas → white card → subtle inset
+     surface differentiates depth. */
   .clinical-card {
-    border: 1px solid #2a2a2a;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
-    transition: border-color 220ms ease-out, background 220ms ease-out;
+    border: 1px solid rgba(10, 10, 10, 0.10);
+    background: #FFFFFF;
+    box-shadow:
+      0 1px 2px rgba(10, 10, 10, 0.04),
+      0 1px 1px rgba(10, 10, 10, 0.02);
+    transition: border-color 220ms ease-out, box-shadow 220ms ease-out;
   }
 
   .clinical-card-interactive {
     cursor: pointer;
   }
   .clinical-card-interactive:hover {
-    border-color: rgba(255, 255, 255, 0.18);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
+    border-color: rgba(10, 10, 10, 0.18);
+    box-shadow:
+      0 4px 12px rgba(10, 10, 10, 0.06),
+      0 1px 3px rgba(10, 10, 10, 0.04);
   }
 }
 
@@ -228,7 +304,7 @@ html {
 
 /* Slightly tighten focus outline on every interactive primitive. */
 :focus-visible {
-  outline: 2px solid rgba(255, 56, 56, 0.7);
+  outline: 2px solid rgba(229, 72, 77, 0.7); /* signal-red @ 70% */
   outline-offset: 3px;
   border-radius: 4px;
 }

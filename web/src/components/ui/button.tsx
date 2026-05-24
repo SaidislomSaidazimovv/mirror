@@ -16,9 +16,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Black surface on the light canvas — the workhorse button.
         default: "bg-fg text-bg hover:bg-fg/85",
-        signal: "bg-signal text-fg hover:bg-signal-600",
-        gold: "bg-gold text-bg hover:bg-gold-600",
+        // Signal red surface — used in DIAGNOSIS only (v02 §5.2). Force
+        // white text since the page fg is now black on a light canvas.
+        signal: "bg-signal text-white hover:bg-signal-600",
+        // Gold surface — used in GOLDEN VOICE only (v02 §5.2). Force
+        // white text for legible contrast on the warm gold.
+        gold: "bg-gold text-white hover:bg-gold-600",
         ghost: "text-fg/70 hover:text-fg hover:bg-fg/[0.04]",
         outline:
           "border border-line text-fg hover:border-fg/40 hover:bg-fg/[0.03]",

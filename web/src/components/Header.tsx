@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { StepIndicator } from "@/components/StepIndicator";
 import { useSession, type Stage } from "@/store/session";
 
 const STAGE_LABEL: Record<Stage, string> = {
@@ -19,14 +20,19 @@ export function Header() {
 
   return (
     <header className="border-b border-line">
-      <div className="container flex items-center justify-between h-14">
-        <div className="flex items-center gap-4">
+      <div className="container flex items-center justify-between h-14 gap-6">
+        <div className="flex items-center gap-4 shrink-0">
           <Wordmark />
-          <span className="font-data text-[10px] text-fg/40 tracking-[0.22em] uppercase">
+          <span className="font-data text-[10px] text-fg/40 tracking-[0.22em] uppercase hidden md:inline">
             v01 · Tashkent → World
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        {/* v02 §6.2 step indicator — persists across stages so the
+            viewer always knows where they are in the 4-step loop. */}
+        <div className="hidden md:flex">
+          <StepIndicator />
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
           <Badge
             variant={
               stage === "recording"
