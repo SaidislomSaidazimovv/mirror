@@ -246,4 +246,4 @@ Pushed up to: `3ce0d6f` (HF router migration).
 - Required at submission: a Google Slides link (template, set to
   "Anyone with the link — Viewer") + the public GitHub repo link.
 - Repo: <https://github.com/SaidislomSaidazimovv/mirror>
-- Live: <https://sheganai.vercel.app>
+- Live: <https://mirroraii.vercel.app>

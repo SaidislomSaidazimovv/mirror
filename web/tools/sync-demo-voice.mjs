@@ -66,7 +66,7 @@ const cloned = (data.voices || []).filter((v) => v.category === "cloned");
 if (cloned.length === 0) {
   console.error(
     "No cloned voices in your workspace. Capture a reference once via " +
-      "https://sheganai.vercel.app (Step 0 · Reference) first, then re-run."
+      "https://mirroraii.vercel.app (Step 0 · Reference) first, then re-run."
   );
   process.exit(1);
 }

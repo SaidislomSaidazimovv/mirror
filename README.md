@@ -4,7 +4,7 @@ Hear yourself speak perfect Mandarin — diagnosed by your L1.
 
 Built for the Build with AI EdTech Hackathon 2026, General Education track, New Uzbekistan University, Tashkent.
 
-- Live demo: https://sheganai.vercel.app
+- Live demo: https://mirroraii.vercel.app
 - Repo: https://github.com/SaidislomSaidazimovv/mirror
 
 ## The Problem
