@@ -18,6 +18,7 @@ import { getDemoSentence } from "@/lib/demoData";
 import { DEMO_USER } from "@/data/demoUser";
 import { sleep } from "@/lib/utils";
 import {
+  charCoveragePct,
   findFirstMismatch,
   isSpeechRecognitionSupported,
   startRecognition,
@@ -53,6 +54,7 @@ export default function App() {
   const handleMainFinish = useCallback(
     async (result: Recording) => {
       session.setTargetRecording({ url: result.url, blob: result.blob });
+      session.setRecordingDurationSec(result.duration);
       session.goto("analyzing");
       await runAnalysisAndDiagnosis(result);
     },
@@ -191,6 +193,9 @@ export default function App() {
       session.setLastTranscript(transcript);
       session.setAsrProvider(provider);
       session.setAsrReason(reason);
+      // RESOLVED report needs the SPEAK coverage % — what fraction of the
+      // target hanzi the user actually produced. 0 on no-speech.
+      session.setCharCoveragePct(charCoveragePct(sentence.hanzi, transcript));
 
       const mismatchCharIdx = findFirstMismatch(sentence.hanzi, transcript);
       const noSpeech = transcript.length === 0;

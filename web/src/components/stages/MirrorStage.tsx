@@ -31,6 +31,8 @@ interface Props {
  */
 export function MirrorStage({ onDone, onSkip }: Props) {
   const sentence = getDemoSentence(useSession((s) => s.sentenceId));
+  const setPeakMirrorAlignmentPct = useSession((s) => s.setPeakMirrorAlignmentPct);
+  const peakSoFar = useSession((s) => s.peakMirrorAlignmentPct);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -140,6 +142,18 @@ export function MirrorStage({ onDone, onSkip }: Props) {
     if (status !== "ready") return;
     if (boostedAlignment >= 80) setStatus("matched");
   }, [boostedAlignment, status]);
+
+  // 3b. Record the peak alignment so the RESOLVED report can show the
+  // best the user reached during the mirror step.
+  useEffect(() => {
+    const current = Math.round(boostedAlignment);
+    if (peakSoFar === null || current > peakSoFar) {
+      setPeakMirrorAlignmentPct(current);
+    }
+    // peakSoFar is updated by this same effect; intentionally read-only
+    // dependency so we only refire when alignment moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boostedAlignment]);
 
   // MIRROR stage: no auto-advance. User watches the synthetic avatar
   // mouth the sentence, mimics it on the right, and clicks "Lock in

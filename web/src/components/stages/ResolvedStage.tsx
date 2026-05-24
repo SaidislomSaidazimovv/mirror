@@ -11,30 +11,30 @@ interface Props {
 }
 
 /**
- * Mirror DevHandover v02 §6.8 — calm number-driven close.
+ * RESOLVED — close of the loop. Replaces the spec's three aspirational
+ * figures with an honest, real-data Step Report: how completely the
+ * user finished each of the four steps, plus a composite overall %.
  *
- *     10.4s
- *     total time
+ *     01 SPEAK            100 %    captured
+ *     02 DIAGNOSE          83 %    coverage
+ *     03 GOLDEN VOICE     100 %    listened
+ *     04 MIRROR            96 %    peak match
+ *                ────────────
+ *     OVERALL              95 %
  *
- *     0
- *     native speakers required
- *
- *     1
- *     voice — yours
- *
- *     [   Try another sentence   ]
- *     [   Start over             ]
- *
- * Numbers count up sequentially (400ms each, 200ms between). Buttons
- * fade in last at 1800ms — subtle, no fills, just primary text on the
- * canvas.
+ * Each row reveals sequentially (350ms apart) for the spec's
+ * "calm, number-driven close" feel. Per Mirror v02 §10 we deliberately
+ * phrase the numbers as "completion" / "coverage" / "match" rather
+ * than "accuracy" or "score" — the app makes no grading claims.
  */
 
-const FIGURES = [
-  { value: "10.4", suffix: "s", label: "total time" },
-  { value: "0", suffix: "", label: "native speakers required" },
-  { value: "1", suffix: "", label: "voice — yours" },
-] as const;
+interface StepRow {
+  key: string;
+  num: string;
+  label: string;
+  value: number | null;
+  note: string;
+}
 
 export function ResolvedStage({ onAgain, onNext }: Props) {
   const sentenceId = useSession((s) => s.sentenceId);
@@ -42,13 +42,36 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
   const sentence = getDemoSentence(sentenceId);
   const attempts = useSession((s) => s.attemptsThisSession);
 
-  // Sequentially reveal each figure — 400ms each, 200ms between (v02 §6.8).
+  const recordingDurationSec = useSession((s) => s.recordingDurationSec);
+  const charCoveragePct = useSession((s) => s.charCoveragePct);
+  const goldenListenedPct = useSession((s) => s.goldenListenedPct);
+  const peakMirrorAlignmentPct = useSession((s) => s.peakMirrorAlignmentPct);
+
+  const speakPct = recordingDurationSec !== null && recordingDurationSec > 0 ? 100 : 0;
+  const rows: StepRow[] = [
+    { key: "speak", num: "01", label: "Speak", value: speakPct, note: "captured" },
+    { key: "diagnose", num: "02", label: "Diagnose", value: charCoveragePct, note: "coverage" },
+    { key: "golden", num: "03", label: "Golden Voice", value: goldenListenedPct, note: "listened" },
+    { key: "mirror", num: "04", label: "Mirror", value: peakMirrorAlignmentPct, note: "peak match" },
+  ];
+
+  // Composite — simple average of the four step %s, ignoring nulls
+  // (steps the user skipped or that failed silently).
+  const present = rows.filter((r) => r.value !== null).map((r) => r.value as number);
+  const overall = present.length > 0
+    ? Math.round(present.reduce((a, b) => a + b, 0) / present.length)
+    : 0;
+
+  // Sequential reveal — 350ms between rows + 600ms beat before OVERALL.
   const [revealed, setRevealed] = useState(0);
   useEffect(() => {
-    const timers = FIGURES.map((_, i) =>
-      window.setTimeout(() => setRevealed((r) => Math.max(r, i + 1)), 200 + i * 600)
+    const timers: number[] = [];
+    rows.forEach((_, i) =>
+      timers.push(window.setTimeout(() => setRevealed((r) => Math.max(r, i + 1)), 200 + i * 350))
     );
+    timers.push(window.setTimeout(() => setRevealed((r) => Math.max(r, rows.length + 1)), 200 + rows.length * 350 + 600));
     return () => timers.forEach((t) => window.clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleNext = () => {
@@ -65,62 +88,100 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
           Loop {attempts.toString().padStart(2, "0")} · resolved
         </div>
 
-        <div className="flex flex-col items-center gap-10">
-          {FIGURES.map((fig, i) => (
+        {/* Per-step report */}
+        <div className="flex flex-col items-stretch gap-4 mb-8 text-left">
+          {rows.map((row, i) => (
             <motion.div
-              key={fig.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={
-                revealed > i
-                  ? { opacity: 1, y: 0 }
-                  : { opacity: 0, y: 16 }
-              }
+              key={row.key}
+              initial={{ opacity: 0, y: 12 }}
+              animate={revealed > i ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
               transition={{ duration: 0.4, ease: ease.out }}
-              className="flex flex-col items-center"
+              className="grid grid-cols-[3rem_1fr_auto_6rem] items-baseline gap-4 border-b border-line/60 pb-3"
             >
-              <div className="font-mono text-hero text-fg tabular-nums">
-                {fig.value}
-                {fig.suffix && (
-                  <span className="text-fg/40 ml-1">{fig.suffix}</span>
+              <span className="font-data text-micro tracking-[0.22em] text-fg/40 tabular-nums">
+                {row.num}
+              </span>
+              <span className="font-stamp text-xl text-fg">
+                {row.label}
+              </span>
+              <span className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
+                {row.note}
+              </span>
+              <span
+                className={cn(
+                  "font-mono text-2xl tabular-nums text-right",
+                  row.value === null
+                    ? "text-fg/30"
+                    : row.value >= 90
+                      ? "text-success"
+                      : "text-fg"
                 )}
-              </div>
-              <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40 mt-2">
-                {fig.label}
-              </div>
+              >
+                {row.value === null ? "—" : `${row.value}%`}
+              </span>
             </motion.div>
           ))}
         </div>
 
-        {/* Subtle text buttons — v02 §6.8: "fg-primary text, transparent bg,
-            hover fg-secondary". Fade in last at ~1800ms. */}
+        {/* Composite overall */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={revealed > rows.length ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+          transition={{ duration: 0.6, ease: ease.out }}
+          className="flex flex-col items-center mt-10"
+        >
+          <div
+            className={cn(
+              "font-mono text-hero tabular-nums",
+              overall >= 90 ? "text-success" : "text-fg"
+            )}
+            style={
+              overall >= 90
+                ? { textShadow: "0 0 32px rgba(22, 128, 74, 0.20)" }
+                : undefined
+            }
+          >
+            {overall}%
+          </div>
+          <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40 mt-2">
+            Overall completion
+          </div>
+        </motion.div>
+
+        {/* Disclaimer + buttons */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, ease: ease.out, delay: 1.8 }}
-          className="mt-16 flex flex-col items-center gap-4"
+          transition={{ duration: 0.6, ease: ease.out, delay: 1.6 }}
+          className="mt-10 flex flex-col items-center gap-3"
         >
-          <button
-            onClick={handleNext}
-            className={cn(
-              "font-stamp uppercase tracking-tighter text-base text-fg",
-              "transition-colors duration-200 ease-out hover:text-fg/60"
-            )}
-          >
-            Try another sentence
-          </button>
-          <button
-            onClick={onAgain}
-            className={cn(
-              "font-stamp uppercase tracking-tighter text-base text-fg/60",
-              "transition-colors duration-200 ease-out hover:text-fg"
-            )}
-          >
-            Start over
-          </button>
+          <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/30">
+            demo readout · not an assessment
+          </div>
+          <div className="flex flex-col items-center gap-4 mt-6">
+            <button
+              onClick={handleNext}
+              className={cn(
+                "font-stamp uppercase tracking-tighter text-base text-fg",
+                "transition-colors duration-200 ease-out hover:text-fg/60"
+              )}
+            >
+              Try another sentence
+            </button>
+            <button
+              onClick={onAgain}
+              className={cn(
+                "font-stamp uppercase tracking-tighter text-base text-fg/60",
+                "transition-colors duration-200 ease-out hover:text-fg"
+              )}
+            >
+              Start over
+            </button>
+          </div>
         </motion.div>
 
         {sentence && (
-          <div className="mt-20 font-data text-micro uppercase tracking-[0.2em] text-fg/30">
+          <div className="mt-14 font-data text-micro uppercase tracking-[0.2em] text-fg/30">
             Just completed · {sentence.hanzi} · {sentence.pinyin}
           </div>
         )}

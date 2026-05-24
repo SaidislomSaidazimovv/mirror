@@ -53,3 +53,7 @@ tmp/
 
 .vercel
 .env*.local
+
+# Internal working notes — kept locally, not exposed in the public repo.
+CHANGELOG.md
+NOTES.md

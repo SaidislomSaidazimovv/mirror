@@ -198,3 +198,24 @@ export function findFirstMismatch(expected: string, detected: string): number {
   if (d.length < e.length) return d.length; // user said less than expected
   return -1;
 }
+
+/**
+ * Character-level coverage between the target sentence and the ASR
+ * transcript. Returns an integer percentage in [0, 100]. Used by the
+ * RESOLVED report to show how completely the SPEAK step landed.
+ *
+ * Counts position-aligned hanzi matches against the target length —
+ * skipping all whitespace and CJK / Latin punctuation on both sides.
+ * Returns 0 when the transcript is empty.
+ */
+export function charCoveragePct(expected: string, detected: string): number {
+  const norm = (s: string) => s.replace(/[\s　、。，！？.,!?]/g, "");
+  const e = norm(expected);
+  const d = norm(detected);
+  if (e.length === 0) return 0;
+  let matched = 0;
+  for (let i = 0; i < e.length; i++) {
+    if (i < d.length && e[i] === d[i]) matched++;
+  }
+  return Math.round((matched / e.length) * 100);
+}

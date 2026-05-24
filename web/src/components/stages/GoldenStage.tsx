@@ -27,6 +27,7 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
   const golden = useSession((s) => s.golden);
   const clone = useSession((s) => s.clone);
   const sentence = getDemoSentence(useSession((s) => s.sentenceId));
+  const setGoldenListenedPct = useSession((s) => s.setGoldenListenedPct);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -211,6 +212,18 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
               onEnded={() => {
                 setPlaying(false);
                 setDone(true);
+                // RESOLVED report — the user heard the full clip.
+                setGoldenListenedPct(100);
+              }}
+              onTimeUpdate={(e) => {
+                // Track partial listening so the RESOLVED report
+                // reflects "user heard 62 %" if they click Continue
+                // mid-clip.
+                const a = e.currentTarget as HTMLAudioElement;
+                if (a.duration > 0 && Number.isFinite(a.duration)) {
+                  const pct = Math.min(100, Math.round((a.currentTime / a.duration) * 100));
+                  setGoldenListenedPct(pct);
+                }
               }}
               onError={() => setAudioMissing(true)}
               className="hidden"

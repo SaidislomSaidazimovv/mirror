@@ -112,6 +112,20 @@ interface SessionState {
   setTutor: (t: TutorExplanation | null) => void;
   setTutorLoading: (loading: boolean) => void;
 
+  /* ----- Step completion metrics (driven into RESOLVED report) ----- */
+  /** Recording duration in seconds — captured after the user stops. */
+  recordingDurationSec: number | null;
+  setRecordingDurationSec: (v: number | null) => void;
+  /** Character-level coverage % between target hanzi and the ASR transcript. */
+  charCoveragePct: number | null;
+  setCharCoveragePct: (v: number | null) => void;
+  /** How much of the Golden Voice clip the user actually heard, 0-100. */
+  goldenListenedPct: number | null;
+  setGoldenListenedPct: (v: number | null) => void;
+  /** Highest match score reached during the Mirror stage, 0-100. */
+  peakMirrorAlignmentPct: number | null;
+  setPeakMirrorAlignmentPct: (v: number | null) => void;
+
   /* ----- Stats for "attempts" display ----- */
   attemptsThisSession: number;
   bumpAttempts: () => void;
@@ -141,6 +155,10 @@ export const useSession = create<SessionState>((set) => ({
       golden: null,
       tutor: null,
       tutorLoading: false,
+      recordingDurationSec: null,
+      charCoveragePct: null,
+      goldenListenedPct: null,
+      peakMirrorAlignmentPct: null,
     }),
 
   reference: null,
@@ -177,6 +195,15 @@ export const useSession = create<SessionState>((set) => ({
   tutorLoading: false,
   setTutor: (tutor) => set({ tutor, tutorLoading: false }),
   setTutorLoading: (tutorLoading) => set({ tutorLoading }),
+
+  recordingDurationSec: null,
+  setRecordingDurationSec: (recordingDurationSec) => set({ recordingDurationSec }),
+  charCoveragePct: null,
+  setCharCoveragePct: (charCoveragePct) => set({ charCoveragePct }),
+  goldenListenedPct: null,
+  setGoldenListenedPct: (goldenListenedPct) => set({ goldenListenedPct }),
+  peakMirrorAlignmentPct: null,
+  setPeakMirrorAlignmentPct: (peakMirrorAlignmentPct) => set({ peakMirrorAlignmentPct }),
 
   attemptsThisSession: 0,
   bumpAttempts: () => set((s) => ({ attemptsThisSession: s.attemptsThisSession + 1 })),
