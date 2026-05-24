@@ -1,5 +1,5 @@
 /**
- * The SHENG demo session state machine.
+ * The Mirror demo session state machine.
  *
  * Per the dev handover §4, every recording loop walks through:
  *   IDLE → RECORDING → ANALYZING → DIAGNOSIS → GOLDEN_VOICE → MIRROR → RESOLVED

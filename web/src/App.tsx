@@ -26,7 +26,7 @@ import {
 import type { Recording } from "@/lib/audio";
 
 /**
- * ShengAI — single-page state machine.
+ * Mirror — single-page state machine.
  *
  * The 4-step demo loop lives entirely here. We delegate visuals to per-stage
  * components and own only orchestration: when each stage hands off to the
@@ -300,7 +300,7 @@ export default function App() {
     session.setReference({ blob: result.blob, url: result.url, durationSec: result.duration });
 
     try {
-      const cloneRes = await api.cloneVoice(result.blob, `sheng-${session.l1}`);
+      const cloneRes = await api.cloneVoice(result.blob, `mirror-${session.l1}`);
       session.setClone({ voiceId: cloneRes.voiceId, source: cloneRes.source === "elevenlabs" ? "live" : "fallback" });
     } catch {
       session.setClone({ voiceId: "demo-fallback", source: "fallback" });
@@ -437,7 +437,7 @@ function Footer() {
   return (
     <footer className="border-t border-line/60">
       <div className="container flex items-center justify-between h-10 font-data text-[10px] uppercase tracking-[0.22em] text-fg/30">
-        <span>SHENG · v01 · Hackathon 2026</span>
+        <span>Mirror · v01 · Hackathon 2026</span>
         <span>Tashkent → World</span>
       </div>
     </footer>

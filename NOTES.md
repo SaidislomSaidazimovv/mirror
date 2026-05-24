@@ -128,21 +128,14 @@ present.
 
 ### 3. Brand
 
-Header reads `声 SHENG`. The hackathon stack slide makes Gemini
-"majburiy" — and the event title is "Build with **AI**" — so a
-brand without "AI" in it is slightly off-narrative. Options:
-- Leave as `SHENG`. Most clinical.
-- `SHENG.AI` (typography-friendly with the dot).
-- `SHENGAI` (the original name on `main`, easy to read).
+Resolved: the product is **Mirror**. Header and favicon use the
+official `Mirror AI` SVG lockup (`/public/mirror-logo.svg`,
+`/public/mirror-mark.svg`). All older labels (the 声 wordmark,
+prior pivot names) have been removed from the build.
 
-No decision yet.
+### 4. Repo + branch
 
-### 4. Branch name
-
-Git branch on Vercel deploys is still `ovoz` even though the brand
-is now SHENG. We kept it intentionally for deploy continuity (the
-README explains this). Worth renaming after the hackathon if SHENG
-brand sticks.
+Pushed to `main` on https://github.com/SaidislomSaidazimovv/mirror.
 
 ---
 
@@ -252,5 +245,5 @@ Pushed up to: `3ce0d6f` (HF router migration).
 - Hard deadline: 2026-05-24 14:30 — team-dashboard upload locks.
 - Required at submission: a Google Slides link (template, set to
   "Anyone with the link — Viewer") + the public GitHub repo link.
-- Repo: <https://github.com/SaidislomSaidazimovv/shengai>
+- Repo: <https://github.com/SaidislomSaidazimovv/mirror>
 - Live: <https://sheganai.vercel.app>

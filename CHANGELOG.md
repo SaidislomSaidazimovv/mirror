@@ -100,17 +100,11 @@ Hash = local git short SHA. Branch is `main` unless noted.
   cheat + Reference Audio Trap together). Stack table reflects current
   build. Disclosure table covers HF Whisper, Web Speech, MediaPipe,
   ElevenLabs, MediaRecorder, shadcn/ui. Env-var section keeps to
-  placeholders (`your_xxx_here`), never real keys. Dropped the legacy
-  "pivoted from ShengAI" narrative and the file-structure tree.
+  placeholders (`your_xxx_here`), never real keys.
 
-- **`2822a58` / `111a1fa` — Rebrand OVOZ → SHENG**
-  Renamed across UI (header wordmark `声 SHENG`, footer, page title,
-  meta description), env labels (`shengai-*` → `sheng-*`), package
-  name (`sheng-web`), and README. Renamed `web/src/lib/ovozData.ts` →
-  `demoData.ts` via `git mv`. Removed advisor docs from `docs/`
-  (DEV_HANDOVER, DECK_SCRIPT) — originals live outside the repo at
-  `HCKT/OVOZ_*.md`. Branch name `ovoz` kept for Vercel deploy
-  continuity (documented in README).
+- **`2822a58` / `111a1fa` — Brand rename pass**
+  Renamed across UI (header wordmark, footer, page title, meta
+  description), env labels, package name, and README.
 
 ---
 
@@ -133,11 +127,10 @@ Hash = local git short SHA. Branch is `main` unless noted.
   Providers — every request fell through to a hardcoded fallback that
   always returned the same `/y/` trigger, even on silence. Replaced
   with `SpeechRecognition` (zh-CN) for the primary ASR path. Added
-  `charPhonemeIdx` to every demo sentence in `ovozData.ts`/`demoData.ts`
-  so we can map the first mismatching character to its signature
-  phoneme and highlight that cell in AnalyzingStage. Silent attempts
-  now route to a dedicated `NoSpeechStage` instead of fabricating a
-  diagnosis.
+  `charPhonemeIdx` to every demo sentence in `demoData.ts` so we can
+  map the first mismatching character to its signature phoneme and
+  highlight that cell in AnalyzingStage. Silent attempts now route
+  to a dedicated `NoSpeechStage` instead of fabricating a diagnosis.
 
 - **`7cf274d` — Rewrite audio capture on MediaRecorder**
   Previous `ScriptProcessorNode` + RAF pipeline had three race
@@ -154,24 +147,24 @@ Hash = local git short SHA. Branch is `main` unless noted.
 
 ---
 
-## v0.1 — OVOZ pivot
+## v0.1 — Pivot to the single-screen loop
 
-- **`265b98d` (and surrounding) — From ShengAI to OVOZ**
-  Ripped out the 6-page ShengAI build (Landing, FreeTest, Practice,
+- **`265b98d` (and surrounding) — Strip the multi-page MVP**
+  Ripped out the original 6-page build (Landing, FreeTest, Practice,
   Dashboard, PinyinChart, Lesson, Firebase auth, react-router) and
   replaced with the single-screen state machine (IDLE → RECORDING →
   ANALYZING → DIAGNOSIS → GOLDEN VOICE → MIRROR → RESOLVED). Stripped
   recharts, pitchy, react-router from `package.json`; added
-  `@mediapipe/tasks-vision`. Pinned the clinical theme (black + signal
-  red `#FF3838` + metallic gold `#D4A437` + Archivo Narrow display +
-  JetBrains Mono body). Initial cut still used the factory-handler
-  pattern that Vercel later rejected — see v0.4 commits.
+  `@mediapipe/tasks-vision`. Pinned the early clinical theme (later
+  replaced by the Mirror light theme in v0.6). Initial cut still used
+  the factory-handler pattern that Vercel later rejected — see v0.4
+  commits.
 
 ---
 
-## v0.0 — Pre-pivot ShengAI
+## v0.0 — Pre-pivot scaffold
 
 Original Mandarin pronunciation trainer with pitch-curve overlay,
 per-syllable scoring, Firebase auth, Firestore sync, adaptive drill
-engine, 6 routed pages. Lives on `main` history before the OVOZ
-pivot (commits `d8476d9` … `265b98d`).
+engine, 6 routed pages. Lives on git history before the pivot
+(commits `d8476d9` … `265b98d`).

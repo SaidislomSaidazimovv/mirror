@@ -60,7 +60,7 @@ function Wordmark() {
   // The Mirror AI brand logotype lives in /public as an SVG. We embed
   // it via <img> so colours / gradients render exactly as designed.
   // h-9 (36px) inside a 56px header — proportional to the original
-  // 声 + SHENG composite the brand replaces.
+  // composite the earlier wordmark replaces.
   return (
     <a href="/" className="flex items-center" aria-label="Mirror — home">
       <img

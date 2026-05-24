@@ -105,7 +105,7 @@ def _call_elevenlabs(audio: dict[str, Any], label: str) -> dict[str, Any]:
         }
         data = {
             "name": label,
-            "description": "SHENG instant clone (L1 reference)",
+            "description": "Mirror instant clone (L1 reference)",
             "remove_background_noise": "true",
         }
         res = requests.post(
@@ -154,11 +154,11 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801
 
         fields = _parse_multipart(raw, ctype)
         audio = fields.get("audio")
-        label_raw = fields.get("label", "sheng-reference")
+        label_raw = fields.get("label", "mirror-reference")
         if not isinstance(audio, dict):
             self._respond(400, {"error": "audio file is required"})
             return
-        label = label_raw if isinstance(label_raw, str) and label_raw else "sheng-reference"
+        label = label_raw if isinstance(label_raw, str) and label_raw else "mirror-reference"
 
         self._respond(200, _call_elevenlabs(audio, label))
 

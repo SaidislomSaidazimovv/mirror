@@ -121,7 +121,7 @@ export function DiagnosisCard({ diagnosis, l1 = "russian", hero = true }: Props)
       >
         <div className="flex items-center gap-4">
           <CornerMark />
-          <span>Phonetic Analysis · SHENG/v01</span>
+          <span>Phonetic Analysis · Mirror/v01</span>
         </div>
         <div className="flex items-center gap-4">
           <span>READING #{stampedAt.replace(/:/g, "")}</span>
