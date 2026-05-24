@@ -60,7 +60,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 — Vercel requires this na
                 "model": os.environ.get("ELEVENLABS_MODEL", "eleven_flash_v2_5"),
                 "asrEndpoint": os.environ.get(
                     "HF_ASR_ENDPOINT",
-                    "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+                    "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3",
                 ),
             }
         ).encode("utf-8")

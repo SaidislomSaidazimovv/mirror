@@ -27,9 +27,12 @@ import requests
 
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "").strip()
+# As of 2024-12, the legacy api-inference.huggingface.co host returns a
+# permanent redirect to the new Inference Providers router. Pin the
+# router URL so the call works whether or not the env override is set.
 HF_ASR_ENDPOINT = os.environ.get(
     "HF_ASR_ENDPOINT",
-    "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+    "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3",
 )
 ALLOWED_ORIGINS = [
     o.strip()
