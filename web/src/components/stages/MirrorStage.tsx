@@ -53,10 +53,8 @@ export function MirrorStage({ onDone, onSkip }: Props) {
   })();
   const boostedAlignment = Math.min(100, tracker.alignment * elapsedRamp);
 
-  const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
-  const matchHoldStartRef = useRef<number | null>(null);
-  const autoAdvancedRef = useRef(false);
+  // onDone is wired straight to the user's button click — no auto-
+  // advance, so no need to keep a ref to it.
 
   // 1. Acquire webcam.
   useEffect(() => {
@@ -143,28 +141,14 @@ export function MirrorStage({ onDone, onSkip }: Props) {
     if (boostedAlignment >= 80) setStatus("matched");
   }, [boostedAlignment, status]);
 
-  // 4. Auto-advance after the alignment has held ≥95% for 1 full second
-  // (Mirror DevHandover v02 §6.7). Resets if alignment drops below 95%.
-  // The match-boost ramp above guarantees we reach 95% even on shaky
-  // tracking, so we hit the spec threshold exactly.
-  useEffect(() => {
-    if (autoAdvancedRef.current) return;
-    if (status === "denied" || status === "loading") return;
-    if (boostedAlignment >= 95) {
-      if (matchHoldStartRef.current === null) {
-        matchHoldStartRef.current = Date.now();
-      }
-      const held = Date.now() - (matchHoldStartRef.current ?? Date.now());
-      if (held >= 1000) {
-        autoAdvancedRef.current = true;
-        onDoneRef.current();
-      }
-    } else {
-      matchHoldStartRef.current = null;
-    }
-  }, [boostedAlignment, status]);
+  // MIRROR stage: no auto-advance. User watches the synthetic avatar
+  // mouth the sentence, mimics it on the right, and clicks "Lock in
+  // match" (or presses Enter) when satisfied. Earlier builds auto-
+  // advanced after ≥95% match held 1s per v02 §6.7 — removed by
+  // user request for full manual control. Match-boost ramp and lock
+  // beat stay (they only affect the visible score, not the transition).
 
-  // 5. Lock beat — fire a single 180ms flash the first time we cross 95%.
+  // Lock beat — fire a single 180ms flash the first time we cross 95%.
   const crossed95Ref = useRef(false);
   useEffect(() => {
     if (crossed95Ref.current) return;

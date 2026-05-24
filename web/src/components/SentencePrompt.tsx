@@ -36,12 +36,19 @@ export function SentencePrompt({ allowSwitch = true }: { allowSwitch?: boolean }
         )}
 
         <div>
-          {/* v02 §6.2 — Mandarin sentence at text-mega (128px) in IDLE,
-              text-display (80px) in RECORDING. Desktop-only per §13. */}
+          {/* Mandarin sentence. v02 §6.2 nominally targets text-mega
+              (128px) on desktop, but inside the SentencePrompt's
+              max-w-3xl container with the prev/next chevrons flanking,
+              128px causes the 6-character row to wrap to two lines.
+              Capping at text-7xl (72px) keeps the sentence on a
+              single line at every breakpoint while still feeling
+              hero-scale. `whitespace-nowrap` is the belt-and-braces. */}
           <div
             className={cn(
-              "font-cjk tracking-tightest text-balance",
-              allowSwitch ? "text-7xl md:text-mega" : "text-6xl md:text-display"
+              "font-cjk tracking-tighter whitespace-nowrap",
+              allowSwitch
+                ? "text-5xl md:text-6xl lg:text-7xl"
+                : "text-4xl md:text-5xl"
             )}
           >
             {sentence.hanzi}

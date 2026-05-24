@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { DiagnosisCard } from "@/components/DiagnosisCard";
 import { AITutorPanel } from "@/components/AITutorPanel";
@@ -17,28 +16,15 @@ interface Props {
 }
 
 /**
- * Mirror DevHandover v02 §6.5: "Hold for 3 full seconds. Then auto-
- * transition to GOLDEN_VOICE." We extend the hold to ~7s because the
- * AI Tutor panel underneath needs a couple of seconds to fetch Gemini
- * and the user needs time to read the explanation. The gold continue
- * button and the Enter keyboard shortcut both skip the wait.
+ * DIAGNOSIS stage: deterministic — no auto-advance. The card lands,
+ * the AI Tutor panel below it streams Gemini's explanation, and the
+ * user reads at their own pace. They advance with the gold "Hear
+ * yourself correct it" button or the Enter keyboard shortcut.
  */
-const AUTO_ADVANCE_MS = 7000;
-
 export function DiagnosisStage({ onTutorLanguageChange, onContinue }: Props) {
   const l1 = useSession((s) => s.l1);
   const sentenceId = useSession((s) => s.sentenceId);
   const sentence = getDemoSentence(sentenceId);
-
-  // Hold the latest onContinue in a ref so the auto-advance timer
-  // runs exactly once per stage entry — not on every parent re-render.
-  const onContinueRef = useRef(onContinue);
-  onContinueRef.current = onContinue;
-
-  useEffect(() => {
-    const t = setTimeout(() => onContinueRef.current(), AUTO_ADVANCE_MS);
-    return () => clearTimeout(t);
-  }, []);
 
   if (!sentence) return null;
   const diagnosis = sentence.diagnoses[l1];
@@ -54,7 +40,7 @@ export function DiagnosisStage({ onTutorLanguageChange, onContinue }: Props) {
           Hear yourself correct it <ArrowRight className="h-4 w-4" />
         </Button>
         <div className="font-data text-[10px] uppercase tracking-[0.22em] text-fg/40">
-          Press <kbd className="px-1.5 py-0.5 border border-line text-fg/60 font-data">ENTER</kbd> or wait — auto-continues
+          Press <kbd className="px-1.5 py-0.5 border border-line text-fg/60 font-data">ENTER</kbd> to continue
         </div>
       </div>
     </div>

@@ -41,11 +41,10 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
   // beneath the waveform (Mirror DevHandover v02 §6.6).
   const [durationSec, setDurationSec] = useState<number | null>(null);
 
-  // Mirror DevHandover v02 §6.6: "On audio end: 400ms hold, then
-  // transition to AVATAR_MIRROR." Ref so the timer keeps the latest
-  // onContinue across re-renders without re-firing.
-  const onContinueRef = useRef(onContinue);
-  onContinueRef.current = onContinue;
+  // GOLDEN VOICE stage: no auto-advance. User listens, optionally
+  // replays, then clicks "Mirror the lips" (or presses Enter) to
+  // continue. Earlier builds auto-advanced 400ms after audio.onEnded
+  // per v02 §6.6 — removed by user request for full manual control.
 
   // Wire the <audio> element into a WebAudio AnalyserNode the first
   // time it's available; this lets us drive a real RMS waveform from
@@ -212,8 +211,6 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
               onEnded={() => {
                 setPlaying(false);
                 setDone(true);
-                // 400ms hold, then auto-advance to MIRROR.
-                setTimeout(() => onContinueRef.current(), 400);
               }}
               onError={() => setAudioMissing(true)}
               className="hidden"
