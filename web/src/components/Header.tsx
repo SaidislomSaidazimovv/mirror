@@ -57,15 +57,16 @@ export function Header() {
 }
 
 function Wordmark() {
+  // The Mirror AI brand logotype lives in /public as an SVG. We embed
+  // it via <img> so colours / gradients render exactly as designed.
   return (
-    <div className="flex items-center gap-2.5">
-      <span
-        className="grid place-items-center w-7 h-7 font-cjk text-lg font-bold text-signal leading-none"
-        aria-hidden
-      >
-        声
-      </span>
-      <span className="font-stamp text-xl tracking-tighter">SHENG</span>
-    </div>
+    <a href="/" className="flex items-center" aria-label="Mirror — home">
+      <img
+        src="/mirror-logo.svg"
+        alt="Mirror"
+        className="h-7 w-auto select-none"
+        draggable={false}
+      />
+    </a>
   );
 }
