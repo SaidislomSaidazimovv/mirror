@@ -109,9 +109,46 @@ export function MirrorStage({ onDone, onSkip }: Props) {
     const frame = tracker.frame;
     if (!frame) return;
 
-    // The <video> is mirrored (scale-x-[-1]) so the user feels natural;
-    // we mirror the X axis here too so the overlay aligns with the video.
-    const tx = (n: { x: number; y: number }) => ({ x: (1 - n.x) * w, y: n.y * h });
+    // Landmarks come back normalized to the FULL native video frame
+    // (e.g. 720×540). The <video> uses object-cover inside a square
+    // container, which scales it up until the smaller dimension fills
+    // and crops the larger. We have to undo that crop or the lip
+    // outline drifts off the actual mouth as the camera aspect ratio
+    // diverges from the container. On top of that the video has
+    // scale-x-[-1] applied so the user sees themselves mirrored —
+    // we apply the same flip to keep the overlay locked to the lips.
+    const video = videoRef.current;
+    const vw = video?.videoWidth ?? 0;
+    const vh = video?.videoHeight ?? 0;
+    const videoAspect = vw > 0 && vh > 0 ? vw / vh : 1;
+    const containerAspect = h > 0 ? w / h : 1;
+
+    // Compute the visible (uncropped) sub-rect of the native video:
+    //   visibleNativeW, visibleNativeH ∈ (0, 1]
+    //   cropX, cropY = offset of that visible rect inside the native frame.
+    let visibleNativeW = 1;
+    let visibleNativeH = 1;
+    let cropX = 0;
+    let cropY = 0;
+    if (videoAspect > containerAspect) {
+      // Video wider than container — sides are clipped.
+      visibleNativeW = containerAspect / videoAspect;
+      cropX = (1 - visibleNativeW) / 2;
+    } else if (videoAspect < containerAspect) {
+      // Video taller — top/bottom clipped.
+      visibleNativeH = videoAspect / containerAspect;
+      cropY = (1 - visibleNativeH) / 2;
+    }
+
+    const tx = (n: { x: number; y: number }) => {
+      // Move landmark from native-frame coords (0..1) to visible-rect
+      // coords (0..1) by subtracting the crop and scaling to the
+      // visible window.
+      const visX = (n.x - cropX) / visibleNativeW;
+      const visY = (n.y - cropY) / visibleNativeH;
+      // Mirror X to match the scale-x-[-1] flip applied to the video.
+      return { x: (1 - visX) * w, y: visY * h };
+    };
 
     const drawPoly = (pts: { x: number; y: number }[], stroke: string, fill?: string) => {
       if (pts.length === 0) return;

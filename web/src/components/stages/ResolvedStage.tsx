@@ -43,11 +43,24 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
   const attempts = useSession((s) => s.attemptsThisSession);
 
   const recordingDurationSec = useSession((s) => s.recordingDurationSec);
+  const lastTranscript = useSession((s) => s.lastTranscript);
   const charCoveragePct = useSession((s) => s.charCoveragePct);
   const goldenListenedPct = useSession((s) => s.goldenListenedPct);
   const peakMirrorAlignmentPct = useSession((s) => s.peakMirrorAlignmentPct);
 
-  const speakPct = recordingDurationSec !== null && recordingDurationSec > 0 ? 100 : 0;
+  // SPEAK is honest about what the mic actually delivered:
+  //   - no recording  → null (step never ran, excluded from average)
+  //   - recording but no transcript (silence / unintelligible) → 0
+  //   - usable transcript → 100
+  const speakPct: number | null =
+    recordingDurationSec === null
+      ? null
+      : lastTranscript.length > 0
+        ? 100
+        : 0;
+
+  // The other three only get a value if their step actually executed,
+  // so a skipped step doesn't drag the overall down — it's excluded.
   const rows: StepRow[] = [
     { key: "speak", num: "01", label: "Speak", value: speakPct, note: "captured" },
     { key: "diagnose", num: "02", label: "Diagnose", value: charCoveragePct, note: "coverage" },
@@ -55,11 +68,14 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
     { key: "mirror", num: "04", label: "Mirror", value: peakMirrorAlignmentPct, note: "peak match" },
   ];
 
-  // Composite — simple average of the four step %s, ignoring nulls
-  // (steps the user skipped or that failed silently).
-  const present = rows.filter((r) => r.value !== null).map((r) => r.value as number);
+  // Composite — equal-weight average of the steps that actually ran
+  // (null = skipped, doesn't count for or against). Clamped 0-100 to
+  // avoid the occasional rounding overshoot on perfect runs.
+  const present = rows
+    .map((r) => r.value)
+    .filter((v): v is number => v !== null);
   const overall = present.length > 0
-    ? Math.round(present.reduce((a, b) => a + b, 0) / present.length)
+    ? Math.max(0, Math.min(100, Math.round(present.reduce((a, b) => a + b, 0) / present.length)))
     : 0;
 
   // Sequential reveal — 350ms between rows + 600ms beat before OVERALL.
