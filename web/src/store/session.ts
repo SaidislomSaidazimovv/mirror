@@ -48,6 +48,15 @@ export interface GoldenClip {
   source: "elevenlabs" | "prerendered";
 }
 
+export type TutorLanguage = "uz" | "ru" | "en";
+
+export interface TutorExplanation {
+  explanation: string;
+  tip: string;
+  source: "gemini" | "fallback";
+  language: TutorLanguage;
+}
+
 interface SessionState {
   /* ----- Demo configuration ----- */
   l1: L1;
@@ -94,6 +103,15 @@ interface SessionState {
   golden: GoldenClip | null;
   setGolden: (g: GoldenClip | null) => void;
 
+  /* ----- Gemini-powered native-language tutor ----- */
+  tutorLanguage: TutorLanguage;
+  setTutorLanguage: (l: TutorLanguage) => void;
+
+  tutor: TutorExplanation | null;
+  tutorLoading: boolean;
+  setTutor: (t: TutorExplanation | null) => void;
+  setTutorLoading: (loading: boolean) => void;
+
   /* ----- Stats for "attempts" display ----- */
   attemptsThisSession: number;
   bumpAttempts: () => void;
@@ -121,6 +139,8 @@ export const useSession = create<SessionState>((set) => ({
       asrProvider: "none",
       asrReason: null,
       golden: null,
+      tutor: null,
+      tutorLoading: false,
     }),
 
   reference: null,
@@ -149,6 +169,14 @@ export const useSession = create<SessionState>((set) => ({
 
   golden: null,
   setGolden: (golden) => set({ golden }),
+
+  tutorLanguage: "uz",
+  setTutorLanguage: (tutorLanguage) => set({ tutorLanguage }),
+
+  tutor: null,
+  tutorLoading: false,
+  setTutor: (tutor) => set({ tutor, tutorLoading: false }),
+  setTutorLoading: (tutorLoading) => set({ tutorLoading }),
 
   attemptsThisSession: 0,
   bumpAttempts: () => set((s) => ({ attemptsThisSession: s.attemptsThisSession + 1 })),

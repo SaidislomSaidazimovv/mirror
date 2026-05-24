@@ -30,6 +30,22 @@ export interface SynthResponse {
   source: "elevenlabs" | "prerendered";
 }
 
+export interface ExplainRequest {
+  transcript: string;
+  target: string;
+  pinyin: string;
+  l1: "russian" | "uzbek";
+  phoneme: string;
+  language: "uz" | "ru" | "en";
+}
+
+export interface ExplainResponse {
+  explanation: string;
+  tip: string;
+  source: "gemini" | "fallback";
+  reason?: string | null;
+}
+
 class TimeoutError extends Error {
   constructor() {
     super("timeout");
@@ -83,6 +99,16 @@ export const api = {
 
   async synthesize(voiceId: string, text: string): Promise<SynthResponse> {
     return postWithTimeout<SynthResponse>("/api/synth", { voiceId, text }, 6000);
+  },
+
+  /**
+   * Gemini 2.0 Flash native-language explanation of the L1 phoneme error.
+   * Returns within a few seconds; the backend always returns a usable
+   * payload (canned fallback if the Gemini call fails) so the UI can
+   * surface *something* on every diagnosis.
+   */
+  async explain(req: ExplainRequest): Promise<ExplainResponse> {
+    return postWithTimeout<ExplainResponse>("/api/explain", req, 15000);
   },
 
   async health(): Promise<{ ok: boolean; elevenlabs: boolean; hf: boolean }> {

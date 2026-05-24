@@ -11,7 +11,7 @@ import { MirrorStage } from "@/components/stages/MirrorStage";
 import { ResolvedStage } from "@/components/stages/ResolvedStage";
 import { ReferenceStage } from "@/components/stages/ReferenceStage";
 import { useRecorder } from "@/hooks/useRecorder";
-import { useSession } from "@/store/session";
+import { useSession, type TutorLanguage } from "@/store/session";
 import { api } from "@/lib/api";
 import { getDemoSentence } from "@/lib/demoData";
 import { sleep } from "@/lib/utils";
@@ -79,6 +79,60 @@ export default function App() {
     const result = await mainRec.stop();
     if (result) await handleMainFinish(result);
   }, [mainRec, handleMainFinish]);
+
+  const requestTutorExplanation = useCallback(
+    async (phoneme: string, transcript: string, language: TutorLanguage) => {
+      const sentence = getDemoSentence(session.sentenceId);
+      if (!sentence) return;
+      session.setTutor(null);
+      session.setTutorLoading(true);
+      try {
+        const res = await api.explain({
+          transcript,
+          target: sentence.hanzi,
+          pinyin: sentence.pinyin,
+          l1: session.l1,
+          phoneme,
+          language,
+        });
+        session.setTutor({
+          explanation: res.explanation,
+          tip: res.tip,
+          source: res.source,
+          language,
+        });
+      } catch {
+        session.setTutor({
+          explanation:
+            language === "uz"
+              ? "Tushuntirish hozir olinmadi. Iltimos, qayta urinib ko'ring."
+              : language === "ru"
+                ? "Объяснение сейчас недоступно. Повторите попытку."
+                : "Explanation unavailable right now. Try again.",
+          tip:
+            language === "uz"
+              ? "Lablar va til holatini diqqat bilan kuzating."
+              : language === "ru"
+                ? "Следите за положением губ и языка."
+                : "Watch lip and tongue position closely.",
+          source: "fallback",
+          language,
+        });
+      }
+    },
+    // session methods are stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session.sentenceId, session.l1]
+  );
+
+  const onTutorLanguageChange = useCallback(
+    (lang: TutorLanguage) => {
+      const phoneme = session.triggeredPhoneme;
+      if (!phoneme) return;
+      void requestTutorExplanation(phoneme, session.lastTranscript, lang);
+    },
+    [session.triggeredPhoneme, session.lastTranscript, requestTutorExplanation]
+  );
 
   const runAnalysisAndDiagnosis = useCallback(
     async (target: Recording) => {
@@ -172,8 +226,15 @@ export default function App() {
       // because judges expect the wow moment — see DEV_HANDOVER §5.
       void perfect;
       session.goto("diagnosis");
+
+      // Fire Gemini tutor call in the background — the DiagnosisCard
+      // animates in immediately; the AITutorPanel shows a loader until
+      // this resolves. We never await here so the UX isn't blocked.
+      void requestTutorExplanation(triggerPhoneme, transcript, session.tutorLanguage);
     },
-    [session]
+    // requestTutorExplanation is stable across renders (its deps are sentenceId+l1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session.l1, session.sentenceId]
   );
 
   const onDiagnosisContinue = useCallback(async () => {
@@ -292,7 +353,10 @@ export default function App() {
           </StageView>
         ) : session.stage === "diagnosis" ? (
           <StageView stageKey="diagnosis" variant="slam">
-            <DiagnosisStage onContinue={onDiagnosisContinue} />
+            <DiagnosisStage
+              onContinue={onDiagnosisContinue}
+              onTutorLanguageChange={onTutorLanguageChange}
+            />
           </StageView>
         ) : session.stage === "no_speech" ? (
           <StageView stageKey="no_speech" variant="slide">

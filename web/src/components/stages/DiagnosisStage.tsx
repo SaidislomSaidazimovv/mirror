@@ -1,31 +1,31 @@
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { DiagnosisCard } from "@/components/DiagnosisCard";
+import { AITutorPanel } from "@/components/AITutorPanel";
 import { ArrowRight } from "lucide-react";
-import { useSession } from "@/store/session";
+import { useSession, type TutorLanguage } from "@/store/session";
 import { getDemoSentence } from "@/lib/demoData";
 
 interface Props {
-  /** Auto-advance after the card has been on screen long enough. */
-  autoAdvance?: boolean;
+  /**
+   * Called when the user re-requests the Gemini explanation in a new
+   * language — App.tsx owns the actual fetch since it has all the
+   * diagnosis context.
+   */
+  onTutorLanguageChange?: (lang: TutorLanguage) => void;
   onContinue: () => void;
 }
 
 /**
- * Holds the diagnosis card on screen for ~3 seconds (auto-advance) or
- * until the user clicks continue. The 3-second hold is the most powerful
- * sound in the room — see the DeckScript speaker notes.
+ * The diagnosis card stays the headline moment; the AI Tutor panel
+ * beneath it carries the Gemini-powered native-language explanation.
+ *
+ * No auto-advance — the tutor panel is the point. The user reads it,
+ * then clicks the gold button to proceed to Golden Voice.
  */
-export function DiagnosisStage({ autoAdvance = true, onContinue }: Props) {
+export function DiagnosisStage({ onTutorLanguageChange, onContinue }: Props) {
   const l1 = useSession((s) => s.l1);
   const sentenceId = useSession((s) => s.sentenceId);
   const sentence = getDemoSentence(sentenceId);
-
-  useEffect(() => {
-    if (!autoAdvance) return;
-    const t = setTimeout(onContinue, 3200);
-    return () => clearTimeout(t);
-  }, [autoAdvance, onContinue]);
 
   if (!sentence) return null;
   const diagnosis = sentence.diagnoses[l1];
@@ -33,6 +33,8 @@ export function DiagnosisStage({ autoAdvance = true, onContinue }: Props) {
   return (
     <div className="container py-14 grid place-items-center">
       <DiagnosisCard diagnosis={diagnosis} hero />
+
+      <AITutorPanel onLanguageChange={onTutorLanguageChange} />
 
       <div className="mt-12 flex justify-center">
         <Button variant="gold" size="lg" onClick={onContinue}>
