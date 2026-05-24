@@ -3,21 +3,25 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * Clinical button.
+ *
+ * Per the dev handover §10 motion direction ("sharp, not bouncy. No
+ * spring animations. Easing should feel forensic, not playful."): no
+ * translate, no scale, no glow shadows. Only colour and border shift
+ * on hover; focus ring stays for keyboard accessibility.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-stamp uppercase tracking-tighter transition-[background,border,color,transform] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-40 active:scale-[0.98] active:duration-75",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-stamp uppercase tracking-tighter transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-40",
   {
     variants: {
       variant: {
-        default:
-          "bg-fg text-bg hover:bg-fg/90 hover:-translate-y-px",
-        signal:
-          "bg-signal text-fg hover:bg-signal-600 hover:-translate-y-px shadow-[0_0_0_0_rgba(255,56,56,0)] hover:shadow-[0_0_28px_-4px_rgba(255,56,56,0.5)]",
-        gold:
-          "bg-gold text-bg hover:bg-gold-600 hover:-translate-y-px shadow-[0_0_0_0_rgba(212,164,55,0)] hover:shadow-[0_0_28px_-4px_rgba(212,164,55,0.45)]",
-        ghost:
-          "text-fg/80 hover:bg-fg/5 hover:text-fg",
+        default: "bg-fg text-bg hover:bg-fg/85",
+        signal: "bg-signal text-fg hover:bg-signal-600",
+        gold: "bg-gold text-bg hover:bg-gold-600",
+        ghost: "text-fg/70 hover:text-fg hover:bg-fg/[0.04]",
         outline:
-          "border border-line text-fg hover:bg-fg/5 hover:border-fg/40 hover:-translate-y-px",
+          "border border-line text-fg hover:border-fg/40 hover:bg-fg/[0.03]",
       },
       size: {
         default: "h-10 px-5 text-sm",

@@ -29,18 +29,9 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
 
         <div className="mt-16 flex flex-col items-center gap-6">
           <div className="relative">
-            <span
-              className="absolute inset-0 rounded-full bg-signal/15 mic-ping pointer-events-none"
-              aria-hidden
-            />
-            <span
-              className="absolute inset-0 rounded-full bg-signal/10 mic-ping pointer-events-none"
-              style={{ animationDelay: "600ms" }}
-              aria-hidden
-            />
             <button
               onClick={onStartRecording}
-              className="relative grid place-items-center w-32 h-32 rounded-full bg-signal text-fg hover:bg-signal-600 transition-[background,transform,box-shadow] duration-200 ease-out hover:scale-[1.04] hover:shadow-[0_0_0_8px_rgba(255,56,56,0.12),0_18px_60px_-12px_rgba(255,56,56,0.7)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-signal/30"
+              className="relative grid place-items-center w-32 h-32 rounded-full bg-signal text-fg hover:bg-signal-600 transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-4 focus-visible:ring-offset-bg"
               aria-label="Start recording"
             >
               <Mic className="h-12 w-12" strokeWidth={1.5} />

@@ -55,14 +55,6 @@ export default {
           "0%": { transform: "translateY(-100%)" },
           "100%": { transform: "translateY(100%)" },
         },
-        "phoneme-tick": {
-          "0%, 100%": { opacity: "0.2", transform: "scaleY(0.4)" },
-          "50%": { opacity: "1", transform: "scaleY(1)" },
-        },
-        "wave-pulse": {
-          "0%, 100%": { transform: "scaleY(1)" },
-          "50%": { transform: "scaleY(1.6)" },
-        },
         "hairline": {
           "0%": { width: "0%" },
           "100%": { width: "100%" },
@@ -71,8 +63,6 @@ export default {
       animation: {
         "slam-in": "slam-in 280ms cubic-bezier(0.16, 1, 0.3, 1)",
         "scan-line": "scan-line 1.6s linear infinite",
-        "phoneme-tick": "phoneme-tick 900ms ease-in-out infinite",
-        "wave-pulse": "wave-pulse 600ms ease-in-out infinite",
         "hairline": "hairline 400ms ease-out forwards",
       },
     },
