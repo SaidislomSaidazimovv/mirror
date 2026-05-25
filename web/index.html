@@ -9,18 +9,23 @@
       name="description"
       content="Mirror — Hear yourself speak perfect Mandarin. L1-aware pronunciation diagnosis with self-cloned golden voice."
     />
+    <!-- v02 §2 #12 stack fonts.
+         JetBrains Mono is self-hosted via the @fontsource/* npm
+         bundle (imported in src/main.tsx). Switzer (the spec's
+         PP Neue Montreal fallback per §5.3) and Noto Sans SC are
+         CDN-served. Spec §5.3 explicitly permits "CDN options also
+         work". Noto Sans SC is fetched from Google Fonts with a
+         text= parameter so only the demo sentence hanzi are sent
+         on the wire — much smaller than the full simplified set. -->
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
-    <!-- Switzer (Fontshare) — the explicit PP Neue Montreal fallback per
-         Mirror DevHandover v02 §5.3. Same Swiss-modern feel, free for
-         commercial use, no self-host required for the hackathon build. -->
     <link
       href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap"
       rel="stylesheet"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&text=%E6%88%91%E5%96%9C%E6%AC%A2%E5%AD%A6%E4%B8%AD%E6%96%87%E4%BD%A0%E5%A5%BD%E5%8F%AB%E6%9D%8E%E6%98%8E%E8%BF%99%E6%98%AF%E4%B8%80%E4%B8%AA%E7%BB%BF%E8%89%B2%E7%9A%84%E9%9B%A8%E4%BC%9E%EF%BC%8C&display=swap"
       rel="stylesheet"
     />
     <title>Mirror — Hear yourself speak perfect Mandarin</title>

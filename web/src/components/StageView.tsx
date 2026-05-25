@@ -15,11 +15,16 @@ interface Props {
  * React.key) so each stage gets its own clean entrance instead of
  * sharing a stale animation timeline.
  *
- * Variants:
- *   - fade  : opacity 0→1, default
- *   - slide : opacity + tiny upward translate, good for IDLE/RESOLVED
- *   - slam  : matches DiagnosisCard — sharp scale + opacity
- *   - scan  : a hairline sweeps in from the left as the content fades in
+ * Durations are tightened to Mirror DevHandover v02 §7.1 macro-flow
+ * cross-fade timings:
+ *   - fade  (400 ms) : default state transition — matches §7.1
+ *                      "cross-fade to ANALYZING / GOLDEN_VOICE" cues.
+ *   - slide (500 ms) : IDLE / RESOLVED entrances — spec range 400–600 ms.
+ *   - slam  (—)      : DiagnosisCard's spring entrance is owned inside
+ *                      the card itself (Motion spring 800 ms with the
+ *                      v02 §6.5 stiffness/damping/mass triple). The
+ *                      wrapper just remounts; no extra CSS animation.
+ *   - scan  (600 ms) : RECORDING — hairline sweep + content fade.
  */
 export function StageView({ stageKey, variant = "fade", children }: Props) {
   return (
@@ -27,10 +32,11 @@ export function StageView({ stageKey, variant = "fade", children }: Props) {
       key={stageKey}
       className={cn(
         "relative",
-        variant === "fade" && "animate-in fade-in duration-500",
+        variant === "fade" && "animate-in fade-in duration-400",
         variant === "slide" && "animate-in fade-in slide-in-from-bottom-2 duration-500",
-        variant === "slam" && "animate-slam-in",
-        variant === "scan" && "animate-in fade-in duration-700"
+        // slam: no wrapper animation — DiagnosisCard's own Motion spring
+        // is the only entrance. Wrapping would double-animate the card.
+        variant === "scan" && "animate-in fade-in duration-600"
       )}
     >
       {variant === "scan" && (

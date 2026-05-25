@@ -22,8 +22,9 @@ interface Props {
  *                ────────────
  *     OVERALL              95 %
  *
- * Each row reveals sequentially (350ms apart) for the spec's
- * "calm, number-driven close" feel. Per Mirror v02 §10 we deliberately
+ * Each row reveals sequentially (120ms apart — the upper bound of
+ * the v02 §7.3 stagger range) for the spec's "calm, number-driven
+ * close" feel. Per Mirror v02 §10 we deliberately
  * phrase the numbers as "completion" / "coverage" / "match" rather
  * than "accuracy" or "score" — the app makes no grading claims.
  */
@@ -78,14 +79,28 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
     ? Math.max(0, Math.min(100, Math.round(present.reduce((a, b) => a + b, 0) / present.length)))
     : 0;
 
-  // Sequential reveal — 350ms between rows + 600ms beat before OVERALL.
+  // Sequential reveal — 120ms between rows (top of v02 §7.3 range)
+  // + 600ms beat before OVERALL (v02 --duration-slow).
+  const STAGGER_MS = 120;
+  const FIRST_DELAY_MS = 200;
+  const OVERALL_BEAT_MS = 600;
   const [revealed, setRevealed] = useState(0);
   useEffect(() => {
     const timers: number[] = [];
     rows.forEach((_, i) =>
-      timers.push(window.setTimeout(() => setRevealed((r) => Math.max(r, i + 1)), 200 + i * 350))
+      timers.push(
+        window.setTimeout(
+          () => setRevealed((r) => Math.max(r, i + 1)),
+          FIRST_DELAY_MS + i * STAGGER_MS
+        )
+      )
     );
-    timers.push(window.setTimeout(() => setRevealed((r) => Math.max(r, rows.length + 1)), 200 + rows.length * 350 + 600));
+    timers.push(
+      window.setTimeout(
+        () => setRevealed((r) => Math.max(r, rows.length + 1)),
+        FIRST_DELAY_MS + rows.length * STAGGER_MS + OVERALL_BEAT_MS
+      )
+    );
     return () => timers.forEach((t) => window.clearTimeout(t));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
