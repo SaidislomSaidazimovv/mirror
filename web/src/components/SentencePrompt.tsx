@@ -65,7 +65,7 @@ export function SentencePrompt({ allowSwitch = true }: { allowSwitch?: boolean }
         {showChevrons && (
           <button
             onClick={prev}
-            className="text-fg/30 hover:text-fg/80 transition-colors p-1"
+            className="text-fg/30 hover:text-fg/80 transition-colors p-2 md:p-1"
             aria-label="Previous sentence"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -80,17 +80,24 @@ export function SentencePrompt({ allowSwitch = true }: { allowSwitch?: boolean }
               can be longer, so we drop the nowrap and let them wrap. */}
           <div
             className={cn(
-              "font-cjk tracking-tighter",
-              isCustom ? "" : "whitespace-nowrap",
+              "font-cjk tracking-tighter wrap-break-word",
+              // `whitespace-nowrap` is the desktop guard that keeps
+              // the three default 5-6 character sentences on a
+              // single line beside the chevrons. On mobile the
+              // chevrons stack tightly and the viewport is too
+              // narrow for nowrap — let the line break naturally.
+              isCustom ? "" : "sm:whitespace-nowrap",
               allowSwitch
-                ? "text-5xl md:text-6xl lg:text-7xl"
-                : "text-4xl md:text-5xl"
+                ? "text-4xl sm:text-5xl md:text-6xl lg:text-7xl"
+                : "text-3xl sm:text-4xl md:text-5xl"
             )}
           >
             {sentence.hanzi}
           </div>
-          {/* v02 §5.3 text-body-lg (20px) — the pinyin subtitle. */}
-          <div className="font-data text-fg/60 mt-5 text-body-lg tracking-wide">
+          {/* v02 §5.3 text-body-lg (20px) — the pinyin subtitle.
+              Scales down on mobile so it doesn't dwarf the hanzi
+              when the hanzi itself has been reduced. */}
+          <div className="font-data text-fg/60 mt-4 sm:mt-5 text-base sm:text-body-lg tracking-wide wrap-break-word">
             {sentence.pinyin}
           </div>
           {!isCustom && (
@@ -103,7 +110,7 @@ export function SentencePrompt({ allowSwitch = true }: { allowSwitch?: boolean }
         {showChevrons && (
           <button
             onClick={next}
-            className="text-fg/30 hover:text-fg/80 transition-colors p-1"
+            className="text-fg/30 hover:text-fg/80 transition-colors p-2 md:p-1"
             aria-label="Next sentence"
           >
             <ChevronRight className="h-6 w-6" />

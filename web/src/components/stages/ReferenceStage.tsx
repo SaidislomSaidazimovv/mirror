@@ -88,7 +88,7 @@ export function ReferenceStage({
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="container py-14"
+      className="container py-8 sm:py-12 md:py-14"
     >
       {/* v02 §6.1 thin top progress bar — ElevenLabs IVC doesn't expose
           per-step progress, so we drive a deterministic ease-out curve
@@ -146,12 +146,14 @@ export function ReferenceStage({
           </div>
         </motion.div>
 
-        {/* v02 §6.1 passage card — bg-surface, radius-lg, shadow-2, padding 48px. */}
+        {/* v02 §6.1 passage card — bg-surface, radius-lg, shadow-2, padding 48px.
+            Padding steps 20 → 32 → 48px so the reading passage fits
+            without crowding text on narrow phones. */}
         <motion.div
           variants={itemVariants}
           className={cn(
             "bg-white rounded-lg shadow-2 mb-8",
-            "p-8 md:p-12"
+            "p-5 sm:p-8 md:p-12"
           )}
         >
           <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40 mb-4">

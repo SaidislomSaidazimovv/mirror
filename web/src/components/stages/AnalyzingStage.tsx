@@ -97,7 +97,7 @@ export function AnalyzingStage() {
       : "wav2vec2-xlsr · L2-arctic";
 
   return (
-    <div className="container py-14 grid place-items-center animate-in fade-in duration-500">
+    <div className="container py-8 sm:py-12 md:py-14 grid place-items-center animate-in fade-in duration-500">
       <div className="w-full max-w-3xl">
         <div className="flex items-center justify-between mb-12">
           <Badge variant="default">

@@ -298,7 +298,7 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
   }, [synthesizing]);
 
   return (
-    <div className="container py-14 grid place-items-center">
+    <div className="container py-8 sm:py-12 md:py-14 grid place-items-center">
       <div className="w-full max-w-3xl">
         <div className="flex items-center justify-between mb-10">
           <Badge variant="gold">

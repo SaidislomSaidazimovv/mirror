@@ -75,13 +75,21 @@ export function MirrorStage({ onDone, onSkip }: Props) {
   // onDone is wired straight to the user's button click — no auto-
   // advance, so no need to keep a ref to it.
 
-  // 1. Acquire webcam.
+  // 1. Acquire webcam. We send the desktop landscape constraint as
+  // a non-strict hint via `ideal` so mobile front cameras — which
+  // are typically locked to portrait — don't refuse the request
+  // outright. Without `ideal:` some Androids return OverconstrainedError
+  // for "width: 720, height: 540" because their native sensor is 9:16.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 720, height: 540, facingMode: "user" },
+          video: {
+            width: { ideal: 720 },
+            height: { ideal: 540 },
+            facingMode: "user",
+          },
           audio: false,
         });
         if (cancelled) {
@@ -277,7 +285,7 @@ export function MirrorStage({ onDone, onSkip }: Props) {
   }, [displayedAlignment]);
 
   return (
-    <div className="container py-14">
+    <div className="container py-8 sm:py-12 md:py-14">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <Badge variant="gold">

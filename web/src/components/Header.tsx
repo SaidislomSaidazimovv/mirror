@@ -20,8 +20,8 @@ export function Header() {
 
   return (
     <header className="border-b border-line">
-      <div className="container flex items-center justify-between h-14 gap-6">
-        <div className="flex items-center gap-4 shrink-0">
+      <div className="container flex items-center justify-between h-14 gap-2 sm:gap-4 md:gap-6">
+        <div className="flex items-center gap-3 md:gap-4 shrink-0 min-w-0">
           <Wordmark />
           <span className="font-data text-[10px] text-fg/40 tracking-[0.22em] uppercase hidden md:inline">
             v01 · Tashkent → World
@@ -32,7 +32,7 @@ export function Header() {
         <div className="hidden md:flex">
           <StepIndicator />
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Badge
             variant={
               stage === "recording"
@@ -47,7 +47,9 @@ export function Header() {
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />
             {STAGE_LABEL[stage]}
           </Badge>
-          <span className="font-data text-[10px] text-fg/40 tracking-[0.18em] uppercase">
+          {/* Loops counter is a clinical accent — hide it on narrow
+              phones so the badge has breathing room. */}
+          <span className="font-data text-[10px] text-fg/40 tracking-[0.18em] uppercase hidden sm:inline">
             Loops · {attempts.toString().padStart(2, "0")}
           </span>
         </div>

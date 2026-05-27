@@ -30,7 +30,7 @@ export function DiagnosisStage({ onTutorLanguageChange, onContinue }: Props) {
   const diagnosis = sentence.diagnoses[l1];
 
   return (
-    <div className="container py-14 grid place-items-center">
+    <div className="container py-8 sm:py-12 md:py-14 grid place-items-center">
       <DiagnosisCard
         diagnosis={diagnosis}
         l1={l1}

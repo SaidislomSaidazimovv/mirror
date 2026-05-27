@@ -51,7 +51,7 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
   };
 
   return (
-    <div className="container py-14 grid place-items-center">
+    <div className="container py-8 sm:py-12 md:py-14 grid place-items-center">
       <div className="w-full max-w-3xl">
         <div className="flex justify-end mb-4">
           <SentenceLibraryDropdown
@@ -61,7 +61,7 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
         </div>
         <SentencePrompt />
 
-        <div className="mt-16 flex flex-col items-center gap-6">
+        <div className="mt-10 sm:mt-14 md:mt-16 flex flex-col items-center gap-6">
           <div className="relative">
             {/* v02 §5.6 mesh motif — corner accents framing the mic. */}
             <div
@@ -95,7 +95,11 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
             <motion.button
               onClick={micEnabled ? onStartRecording : onStartReference}
               className={
-                "relative grid place-items-center w-30 h-30 rounded-full bg-fg text-bg shadow-2 transition-shadow duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-4 focus-visible:ring-offset-bg " +
+                // v02 §6.2 calls out 120px on desktop. On a 343px
+                // mobile container that's a third of the width — we
+                // step down to 96px so the rest of the page isn't
+                // crowded out by the mic.
+                "relative grid place-items-center w-24 h-24 md:w-30 md:h-30 rounded-full bg-fg text-bg shadow-2 transition-shadow duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-4 focus-visible:ring-offset-bg " +
                 (micEnabled ? "" : "opacity-40 cursor-pointer")
               }
               style={{

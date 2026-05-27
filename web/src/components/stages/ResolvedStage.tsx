@@ -118,34 +118,39 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
   };
 
   return (
-    <div className="container py-20 grid place-items-center text-center">
+    <div className="container py-10 sm:py-16 md:py-20 grid place-items-center text-center">
       <div className="max-w-2xl w-full">
-        <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40 mb-12">
+        <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40 mb-8 sm:mb-12">
           Loop {attempts.toString().padStart(2, "0")} · resolved
         </div>
 
-        {/* Per-step report */}
-        <div className="flex flex-col items-stretch gap-4 mb-8 text-left">
+        {/* Per-step report. On mobile we collapse the "note" cell
+            into the label column (label on top, note underneath) so
+            the row keeps three real columns instead of four cramped
+            ones at 311px usable width. */}
+        <div className="flex flex-col items-stretch gap-3 sm:gap-4 mb-8 text-left">
           {rows.map((row, i) => (
             <motion.div
               key={row.key}
               initial={{ opacity: 0, y: 12 }}
               animate={revealed > i ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
               transition={{ duration: 0.4, ease: ease.out }}
-              className="grid grid-cols-[3rem_1fr_auto_6rem] items-baseline gap-4 border-b border-line/60 pb-3"
+              className="grid grid-cols-[2.25rem_1fr_auto] sm:grid-cols-[3rem_1fr_auto_6rem] items-baseline gap-3 sm:gap-4 border-b border-line/60 pb-3"
             >
               <span className="font-data text-micro tracking-[0.22em] text-fg/40 tabular-nums">
                 {row.num}
               </span>
-              <span className="font-stamp text-xl text-fg">
-                {row.label}
-              </span>
-              <span className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
-                {row.note}
-              </span>
+              <div className="flex flex-col sm:contents min-w-0">
+                <span className="font-stamp text-lg sm:text-xl text-fg wrap-break-word">
+                  {row.label}
+                </span>
+                <span className="font-data text-[10px] sm:text-micro uppercase tracking-[0.22em] text-fg/40 mt-0.5 sm:mt-0">
+                  {row.note}
+                </span>
+              </div>
               <span
                 className={cn(
-                  "font-mono text-2xl tabular-nums text-right",
+                  "font-mono text-xl sm:text-2xl tabular-nums text-right",
                   row.value === null
                     ? "text-fg/30"
                     : row.value >= 90
@@ -168,7 +173,7 @@ export function ResolvedStage({ onAgain, onNext }: Props) {
         >
           <div
             className={cn(
-              "font-mono text-hero tabular-nums",
+              "font-mono text-5xl sm:text-hero tabular-nums",
               overall >= 90 ? "text-success" : "text-fg"
             )}
             style={
