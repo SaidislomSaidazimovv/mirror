@@ -113,7 +113,7 @@ export function ReferenceStage({
       <div className="max-w-3xl mx-auto">
         <motion.div
           variants={itemVariants}
-          className="flex items-center justify-between mb-10"
+          className="flex items-center justify-between mb-8 sm:mb-10 gap-2 flex-wrap"
         >
           {/* Back only appears when the user came here voluntarily
               (they already have a clone). Forced first-visit has no
@@ -123,10 +123,16 @@ export function ReferenceStage({
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           ) : (
-            <div className="w-16" aria-hidden />
+            <div className="w-0 sm:w-16" aria-hidden />
           )}
           <Badge variant={recording ? "live" : "default"}>
-            STEP 0 · REFERENCE CAPTURE · {l1.toUpperCase()}
+            {/* Shortened on narrow phones — the full label
+                ("STEP 0 · REFERENCE CAPTURE · UZBEK") collides with
+                the Back button and ≤ Ns counter on the same row. */}
+            <span className="sm:hidden">REF · {l1.toUpperCase()}</span>
+            <span className="hidden sm:inline">
+              STEP 0 · REFERENCE CAPTURE · {l1.toUpperCase()}
+            </span>
           </Badge>
           <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
             ≤ {maxSeconds}s

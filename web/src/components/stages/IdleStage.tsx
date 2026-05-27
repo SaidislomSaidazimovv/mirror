@@ -133,13 +133,18 @@ export function IdleStage({ onStartRecording, onStartReference }: Props) {
             </motion.button>
           </div>
 
-          <div className="text-center">
+          <div className="text-center max-w-xs sm:max-w-none">
             {micEnabled ? (
-              <div className="font-data text-[11px] uppercase tracking-[0.22em] text-fg/40">
-                Press <kbd className="px-1.5 py-0.5 border border-line text-fg/60 font-data text-[10px]">SPACE</kbd> to speak · hold to record · auto-stops at 8s
+              <div className="font-data text-[11px] uppercase tracking-[0.22em] text-fg/40 leading-relaxed">
+                {/* Full clause on tablets+; mobile drops the
+                    "hold to record" middle clause so the line keeps
+                    the keyboard hint legible at 288px width. */}
+                Press <kbd className="px-1.5 py-0.5 border border-line text-fg/60 font-data text-[10px]">SPACE</kbd> to speak
+                <span className="hidden sm:inline"> · hold to record</span>
+                <span> · auto-stops at 8s</span>
               </div>
             ) : (
-              <div className="font-data text-[11px] uppercase tracking-[0.22em] text-signal">
+              <div className="font-data text-[11px] uppercase tracking-[0.22em] text-signal leading-relaxed">
                 Voice clone required — record a 10s reference first.
               </div>
             )}

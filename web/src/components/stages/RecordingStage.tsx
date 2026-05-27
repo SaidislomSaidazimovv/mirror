@@ -40,8 +40,11 @@ export function RecordingStage({ liveSamples, elapsed, maxSeconds, onStop, label
             <span>Microphone · 16 kHz · mono</span>
             <span className="text-signal">REC</span>
           </div>
-          {/* v02 §6.3 — 240×80, 30 bars, bar 4px, gap 4px, gentle pulse. */}
-          <div className="mx-auto" style={{ width: 240 }}>
+          {/* v02 §6.3 — 240×80 on desktop, fluid below sm so the 30
+              bars fit a 288px mobile container. The Waveform inner
+              bars stay at fixed pixel widths but the wrapper gives
+              them room when there is room. */}
+          <div className="mx-auto w-full max-w-[240px]">
             <Waveform
               samples={liveSamples}
               tone="signal"

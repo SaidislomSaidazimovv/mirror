@@ -152,9 +152,11 @@ export function AnalyzingStage() {
           </div>
         </div>
 
-        {/* v02 §6.4 — 360×2px progress bar. Track fg-quaternary, fill fg-primary. */}
-        <div className="flex justify-center mb-4">
-          <div className="w-90 h-0.5 bg-fg/10 overflow-hidden">
+        {/* v02 §6.4 — 360×2px progress bar at full size. We cap to the
+            spec width on md+ and let the bar fluid-fill the container
+            on mobile (max-w-90 keeps the desktop ceiling). */}
+        <div className="flex justify-center mb-4 px-4">
+          <div className="w-full max-w-90 h-0.5 bg-fg/10 overflow-hidden">
             <motion.div
               className="h-full bg-fg origin-left"
               style={{ width: `${progress * 100}%` }}

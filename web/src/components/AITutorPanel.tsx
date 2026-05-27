@@ -54,16 +54,19 @@ export function AITutorPanel({ onLanguageChange }: Props) {
           since gold is reserved for the Golden Voice moment only. */}
       <div className="hairline mb-5" />
 
-      <div className="clinical-card p-6">
-        <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="clinical-card p-5 sm:p-6">
+        {/* Header stacks on the narrowest viewports — the
+            "AI Tutor · GPT-4o-mini" label + 3 language pills don't
+            share a row at 288-320px container widths. */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-fg/60" strokeWidth={1.5} />
+            <Sparkles className="h-3.5 w-3.5 text-fg/60 shrink-0" strokeWidth={1.5} />
             <span className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
               AI Tutor · {providerLabel}
             </span>
           </div>
 
-          <div className="flex items-center gap-1" role="tablist" aria-label="Tutor language">
+          <div className="flex items-center gap-1 self-start sm:self-auto" role="tablist" aria-label="Tutor language">
             {LANGUAGE_OPTIONS.map((opt) => (
               <button
                 key={opt.code}

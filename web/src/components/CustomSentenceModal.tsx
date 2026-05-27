@@ -171,8 +171,11 @@ export function CustomSentenceModal({ open, onClose, onSelect }: Props) {
 
             {!preview && (
               <>
-                {/* Source language selector */}
-                <div className="flex items-center gap-1 mb-3 border border-line bg-bg p-0.5 w-fit">
+                {/* Source language selector — wraps below the From
+                    label on the narrowest phones since 3 pills + the
+                    label run ~280px, more than a 272px-content modal
+                    can hold. */}
+                <div className="flex items-center gap-1 mb-3 border border-line bg-bg p-0.5 flex-wrap w-full sm:w-fit">
                   <span className="font-data text-[10px] uppercase tracking-[0.18em] text-fg/40 px-3">
                     From
                   </span>

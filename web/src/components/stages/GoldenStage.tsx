@@ -376,7 +376,12 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
             /* Spectrum bars — symmetrical, mirrored top/bottom, gold gradient.
                64 bars × 6px wide, 4px gap. The CSS handles all rendering;
                we just supply the per-bar amplitude from FFT. */
-            <div className="flex items-center justify-center gap-0.75 h-30">
+            /* 64 bars × 4px desktop = ~445px with the 3px gap. That
+               doesn't fit a 288px mobile container, so the bar width
+               and gap step down on smaller viewports (2px bars, 2px
+               gap → ~254px). The overflow-hidden wrapper is a safety
+               net for arbitrary viewport widths. */
+            <div className="flex items-center justify-center gap-0.5 sm:gap-0.75 h-30 overflow-hidden">
               {bars.map((amp, i) => {
                 const minH = 4;
                 const maxH = 100;
@@ -384,9 +389,8 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
                 return (
                   <div
                     key={i}
-                    className="rounded-full bg-linear-to-b from-gold via-gold to-gold/70 transition-[height] duration-75 ease-out"
+                    className="rounded-full bg-linear-to-b from-gold via-gold to-gold/70 transition-[height] duration-75 ease-out w-0.5 sm:w-1 shrink-0"
                     style={{
-                      width: 4,
                       height: `${h}px`,
                       opacity: 0.55 + amp * 0.45,
                     }}
@@ -529,7 +533,7 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
           </div>
         )}
 
-        <div className="mt-10 flex items-center justify-center gap-3">
+        <div className="mt-8 sm:mt-10 flex items-center justify-center flex-wrap gap-2 sm:gap-3">
           <Button
             variant="ghost"
             size="lg"
