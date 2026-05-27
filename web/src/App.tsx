@@ -65,7 +65,59 @@ export default function App() {
   );
 
   const mainRec = useRecorder(MAIN_MAX_SECONDS, handleMainFinish);
-  const refRec = useRecorder(REF_MAX_SECONDS);
+
+  // Shared post-recording flow for the reference capture. Wired to BOTH
+  // the manual "Stop & clone" button AND useRecorder's auto-stop
+  // callback — otherwise the 10s ceiling left the user frozen on the
+  // ReferenceStage with no clone request in flight.
+  // The processing ref guards against the (rare) race where manual
+  // stop and the timer's auto-finalize fire for the same Recording —
+  // without it we'd burn two ElevenLabs voice slots per capture.
+  const refProcessingRef = useRef(false);
+  const processReferenceRecording = useCallback(
+    async (result: Recording) => {
+      if (refProcessingRef.current) return;
+      refProcessingRef.current = true;
+      session.setReference({
+        blob: result.blob,
+        url: result.url,
+        durationSec: result.duration,
+      });
+
+      // If the user is re-capturing (an old live clone already exists),
+      // release that slot before we burn a new one — Starter plan caps
+      // the workspace at 10 IVC voices. Best-effort; failures are silent.
+      const previousClone = session.clone;
+      if (
+        previousClone &&
+        previousClone.source === "live" &&
+        previousClone.voiceId !== "demo-fallback"
+      ) {
+        void api.deleteVoice(previousClone.voiceId);
+      }
+
+      // Stay on the ReferenceStage with a visible progress indicator
+      // while ElevenLabs IVC runs (8-20s). Without this the screen
+      // freezes silently and users assume the app hung.
+      session.setCloning(true);
+      try {
+        const cloneRes = await api.cloneVoice(result.blob, `mirror-${session.l1}`);
+        session.setClone({
+          voiceId: cloneRes.voiceId,
+          source: cloneRes.source === "elevenlabs" ? "live" : "fallback",
+        });
+      } catch {
+        session.setClone({ voiceId: "demo-fallback", source: "fallback" });
+      } finally {
+        session.setCloning(false);
+        refProcessingRef.current = false;
+      }
+      setMode("main");
+    },
+    [session]
+  );
+
+  const refRec = useRecorder(REF_MAX_SECONDS, processReferenceRecording);
 
   const onStartRecording = useCallback(async () => {
     // Defense-in-depth: IdleStage disables the mic when no clone exists
@@ -363,33 +415,14 @@ export default function App() {
     }
   }, [refRec]);
 
+  // Manual Stop button: finalize and route through the same
+  // processReferenceRecording flow as the timer's auto-stop. The
+  // processing guard inside that function dedupes the (rare) case
+  // where the button click and the 10s tick fire near-simultaneously.
   const onStopReferenceCapture = useCallback(async () => {
     const result = await refRec.stop();
-    if (!result) return;
-    session.setReference({ blob: result.blob, url: result.url, durationSec: result.duration });
-
-    // If the user is re-capturing (an old live clone already exists),
-    // release that slot before we burn a new one — Starter plan caps
-    // the workspace at 10 IVC voices. Best-effort; failures are silent.
-    const previousClone = session.clone;
-    if (previousClone && previousClone.source === "live" && previousClone.voiceId !== "demo-fallback") {
-      void api.deleteVoice(previousClone.voiceId);
-    }
-
-    // Stay on the ReferenceStage with a visible progress indicator
-    // while ElevenLabs IVC runs (8-20s). Without this the screen
-    // freezes silently and users assume the app hung.
-    session.setCloning(true);
-    try {
-      const cloneRes = await api.cloneVoice(result.blob, `mirror-${session.l1}`);
-      session.setClone({ voiceId: cloneRes.voiceId, source: cloneRes.source === "elevenlabs" ? "live" : "fallback" });
-    } catch {
-      session.setClone({ voiceId: "demo-fallback", source: "fallback" });
-    } finally {
-      session.setCloning(false);
-    }
-    setMode("main");
-  }, [refRec, session]);
+    if (result) await processReferenceRecording(result);
+  }, [refRec, processReferenceRecording]);
 
   /* ----- Voice-slot cleanup on tab close (ElevenLabs Starter cap) -----
    *

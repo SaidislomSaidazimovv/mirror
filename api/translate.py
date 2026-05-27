@@ -191,12 +191,26 @@ def _call_openai(text: str, source_l1: str) -> dict[str, Any]:
             return {"error": "missing_hanzi", "source": "fallback"}
         if not isinstance(phonemes, list) or not phonemes:
             return {"error": "missing_phonemes", "source": "fallback"}
-        if not isinstance(idx, list) or len(idx) != len(hanzi):
-            return {
-                "error": "char_phoneme_idx_mismatch",
-                "source": "fallback",
-                "detail": f"hanzi={len(hanzi)} idx={len(idx)}",
-            }
+        if not isinstance(idx, list) or len(idx) == 0:
+            return {"error": "missing_idx", "source": "fallback"}
+        # GPT-4o-mini occasionally misaligns charPhonemeIdx when proper
+        # nouns or compound terms (e.g. "迪拜" / Dubai) appear — it'll
+        # emit one index per concept rather than per character, leaving
+        # len(idx) < len(hanzi). The strict equality check used to reject
+        # the whole translation for this small alignment glitch; instead
+        # we repair: extend with sequential indices from the last known
+        # position, or truncate if the LLM overshot. The index is only
+        # used to highlight which character carries the trigger phoneme,
+        # so a slightly approximate alignment is acceptable.
+        idx = [int(v) if isinstance(v, (int, float)) else 0 for v in idx]
+        if len(idx) < len(hanzi):
+            last = idx[-1] if idx else 0
+            while len(idx) < len(hanzi):
+                last += 1
+                idx.append(last)
+        elif len(idx) > len(hanzi):
+            idx = idx[: len(hanzi)]
+        parsed["charPhonemeIdx"] = idx
         if not (isinstance(diagnoses, dict) and "russian" in diagnoses and "uzbek" in diagnoses):
             return {"error": "missing_diagnoses", "source": "fallback"}
 

@@ -77,48 +77,79 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
   //      gesture, so creating it on src change leaves it suspended
   //      anyway.
   // The handler is idempotent — second play just resumes the ctx.
+  // Wire the WebAudio analyser to the <audio> element on EVERY play.
+  //
+  // We use `HTMLMediaElement.captureStream()` rather than the older
+  // `createMediaElementSource()` because the latter redirects the
+  // element's output through the AudioContext — a suspended context
+  // (autoplay policy) would then leave the audio dead-silent. The
+  // captureStream path is a tap: audio still plays through the
+  // element's native output, and we just observe a copy.
+  //
+  // Critical: we tear down + rebuild on every call, not just when the
+  // element changes. captureStream's tracks transition to "ended"
+  // when the first playback finishes — reusing the same graph on
+  // Replay would feed the analyser dead tracks and the bars would
+  // stay flat. Building fresh each time costs ~1 ms and guarantees
+  // the bars track the *current* playback. The Safari < 16 path
+  // keeps createMediaElementSource for that narrow audience; there
+  // we DO have to keep the graph alive across plays because the
+  // element can only be captured once.
+  const safariFallbackSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const wireAnalyser = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
-    // Fast path: same audio element we already wired — just resume
-    // the context (it may have been suspended by autoplay policy).
-    if (
-      wiredElementRef.current === el &&
-      analyserRef.current &&
-      audioCtxRef.current
-    ) {
-      void audioCtxRef.current.resume();
-      return;
-    }
-    // Element changed (retry, golden refresh, hot reload) — tear down
-    // the stale graph before creating a new one. Without this we kept
-    // a context tied to a removed <audio> element while the new one
-    // played through the default destination, producing the silent
-    // visualiser the user saw.
+
     if (audioCtxRef.current) {
       void audioCtxRef.current.close().catch(() => undefined);
     }
     audioCtxRef.current = null;
     analyserRef.current = null;
     wiredElementRef.current = null;
+
     try {
       const AudioCtx =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const ctx = new AudioCtx();
-      const source = ctx.createMediaElementSource(el);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
+
+      const elWithCapture = el as HTMLMediaElement & {
+        captureStream?: () => MediaStream;
+      };
+      if (typeof elWithCapture.captureStream === "function") {
+        // Fresh stream tap for THIS playback. The previous stream's
+        // tracks ended when the prior clip finished.
+        const stream = elWithCapture.captureStream();
+        const source = ctx.createMediaStreamSource(stream);
+        source.connect(analyser);
+      } else {
+        // Safari < 16: createMediaElementSource permanently captures
+        // the element. We can only ever create ONE source per element
+        // for the page's lifetime — cache it so subsequent wires
+        // reuse it instead of throwing InvalidStateError.
+        let source = safariFallbackSourceRef.current;
+        if (!source) {
+          source = ctx.createMediaElementSource(el);
+          safariFallbackSourceRef.current = source;
+        }
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+      }
+
       audioCtxRef.current = ctx;
       analyserRef.current = analyser;
       wiredElementRef.current = el;
       void ctx.resume();
-    } catch {
-      // Element already attached to a different context (StrictMode
-      // double-mount), or WebAudio unsupported — fall back to the
-      // procedural placeholder so the card still looks alive.
+    } catch (err) {
+      // WebAudio unsupported, or the element is in a state where the
+      // stream cannot be captured. The bars stay flat in that case —
+      // honest about the visualizer being off rather than running a
+      // fake animation.
+      if (import.meta.env.DEV) {
+        console.warn("[GoldenStage] AnalyserNode wiring failed:", err);
+      }
     }
   }, []);
 
@@ -139,20 +170,12 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
     if (!playing) return;
     const analyser = analyserRef.current;
     if (!analyser) {
-      // No analyser (autoplay blocked, MP3 fallback path) — gentle
-      // breathing animation so the card doesn't look frozen.
-      let i = 0;
-      const id = setInterval(() => {
-        const next: number[] = [];
-        for (let k = 0; k < 64; k++) {
-          const phase = (i + k * 0.4) * 0.12;
-          const env = 0.35 + 0.25 * Math.sin(phase) + 0.15 * Math.sin(phase * 1.7);
-          next.push(Math.max(0.08, env));
-        }
-        setBars(next);
-        i++;
-      }, 60);
-      return () => clearInterval(id);
+      // Analyser never wired (shouldn't happen with captureStream, but
+      // guard anyway). Hold flat — running a procedural breathing
+      // here would lie to the user about the bars being driven by
+      // their audio.
+      setBars(new Array(64).fill(0.02));
+      return;
     }
 
     analyser.fftSize = 256;
@@ -193,18 +216,21 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
     };
   }, [playing]);
 
-  // Auto-play once on mount if a URL is set. Wire the analyser FIRST
-  // so the audio's first sample already routes through the graph;
-  // otherwise the very first run plays through the default output
-  // and the bars stay flat until the user hits Replay.
+  // Auto-play once on mount if a URL is set. We do NOT pre-wire the
+  // analyser here: captureStream() returns an empty MediaStream when
+  // the element hasn't begun rendering yet, leaving the analyser
+  // bound to a silent tap forever. Wiring is deferred to the onPlay
+  // event below, where the element is guaranteed to be rendering
+  // audio.
   useEffect(() => {
     if (golden?.url && audioRef.current) {
-      wireAnalyser();
       audioRef.current.play().catch(() => {
-        // Autoplay blocked or URL invalid; we still show a play button.
+        // Autoplay blocked or URL invalid; the Play button below
+        // will trigger play() inside a user gesture, which then
+        // fires onPlay → wireAnalyser.
       });
     }
-  }, [golden, wireAnalyser]);
+  }, [golden]);
 
   // When the user changes playback speed, push it into the audio
   // element. Default 1.0 covers the normal listening case. We also
@@ -223,8 +249,11 @@ export function GoldenStage({ onContinue, onRetry }: Props) {
     el.playbackRate = playbackRate;
   }, [playbackRate]);
 
-  // While not playing — show a flat resting line. Far less visually
-  // chaotic than the earlier always-on sine animation.
+  // While not playing — show a flat resting line. Any procedural
+  // breathing here gets in the way of the real FFT-driven bars the
+  // user actually wants: a placeholder animation that runs WHEN audio
+  // isn't playing reads as "the visualizer is fake", which is the
+  // opposite of the intent. Flat is honest.
   useEffect(() => {
     if (playing) return;
     setBars(new Array(64).fill(0.02));

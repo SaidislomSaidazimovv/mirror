@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, CheckCircle2, ArrowRight, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,22 @@ import { useSession } from "@/store/session";
 import { useActiveSentence } from "@/lib/activeSentence";
 import { useLipTracker } from "@/hooks/useLipTracker";
 import { cn } from "@/lib/utils";
+
+// Avatar3DViseme pulls in three.js (~200KB gzipped). Lazy-load so the
+// other stages don't pay the bundle cost. If the chunk fails to load
+// (offline, CDN issue) Suspense's error boundary upstream + the
+// webgl2-support check below both fall back to the 2D SyntheticAvatar.
+const Avatar3DViseme = lazy(() => import("@/components/Avatar3DViseme"));
+
+function supportsWebGL2(): boolean {
+  if (typeof document === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    return !!canvas.getContext("webgl2");
+  } catch {
+    return false;
+  }
+}
 
 interface Props {
   onDone: () => void;
@@ -40,12 +56,13 @@ export function MirrorStage({ onDone, onSkip }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "denied" | "matched">("loading");
   // v02 §6.7 lock beat — single 180ms flash when match crosses 95%.
   const [lockBeat, setLockBeat] = useState(false);
-  // The Mirror left panel renders only the 2D synthetic avatar. The
-  // 3D variants (RealisticAvatar3D, ProceduralAvatar3D, the wireframe
-  // mesh) were removed at the user's request — they will be revisited
-  // in a future pass. The 2D version's mouth animation is sourced
-  // from the same per-sentence mouth_open_series JSON, so the
-  // animation contract for downstream components is unchanged.
+
+  // 3D viseme path is the primary target. We detect WebGL2 once at
+  // mount; without it (old browsers, GPU blacklists, headless test
+  // runners) we drop straight to the 2D SyntheticAvatar. The 3D
+  // component itself also catches `webglcontextlost` and signals
+  // back, but that path is just for runtime crashes.
+  const has3D = useMemo(() => supportsWebGL2(), []);
 
   const tracker = useLipTracker({ targetOpenness: 0.04, tolerance: 0.035 });
 
@@ -294,10 +311,22 @@ export function MirrorStage({ onDone, onSkip }: Props) {
                   "ring-2 ring-gold shadow-[0_0_32px_rgba(200,147,46,0.4)]"
               )}
             >
-              <SyntheticAvatar speaking sentenceId={sentence?.id} />
+              {has3D ? (
+                <Suspense
+                  fallback={<SyntheticAvatar speaking sentenceId={sentence?.id} />}
+                >
+                  <Avatar3DViseme
+                    hanzi={sentence?.hanzi}
+                    speaking
+                    className="w-full h-full block"
+                  />
+                </Suspense>
+              ) : (
+                <SyntheticAvatar speaking sentenceId={sentence?.id} />
+              )}
             </div>
             <div className="font-data text-micro uppercase tracking-[0.22em] text-fg/60">
-              Your Avatar
+              {has3D ? "Your Avatar · 3D viseme" : "Your Avatar"}
             </div>
           </div>
 

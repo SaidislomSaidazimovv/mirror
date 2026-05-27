@@ -36,6 +36,18 @@ export function AITutorPanel({ onLanguageChange }: Props) {
     onLanguageChange?.(code);
   };
 
+  // Header label tracks the actual provider that produced the
+  // current explanation. Defaults to GPT-4o-mini — the primary path
+  // in /api/explain.py — so the header doesn't lie during loading or
+  // before the first response. Switches to Gemini's label only when
+  // the OpenAI primary failed and the silent backup took over.
+  const providerLabel =
+    tutor?.source === "gemini"
+      ? "Gemini 2.0 Flash"
+      : tutor?.source === "fallback"
+        ? "Offline library"
+        : "GPT-4o-mini";
+
   return (
     <div className="w-full max-w-2xl mx-auto mt-10">
       {/* v02 §5.2 color discipline — Tutor uses neutral fg, not gold,
@@ -47,7 +59,7 @@ export function AITutorPanel({ onLanguageChange }: Props) {
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-fg/60" strokeWidth={1.5} />
             <span className="font-data text-micro uppercase tracking-[0.22em] text-fg/40">
-              AI Tutor · Gemini 2.0 Flash
+              AI Tutor · {providerLabel}
             </span>
           </div>
 
